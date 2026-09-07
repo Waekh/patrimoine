@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getConfigurationStatus } from "@/config/env";
 import { getAdminDb } from "@/db/client";
+import { assets } from "@/db/schema";
 import { withUserDb } from "@/db/user-db";
 import { logger } from "@/lib/logger";
 
@@ -43,9 +44,14 @@ export async function GET() {
   }
 
   const database = await check("database", () => getAdminDb().execute(sql`select 1`));
-  // Runs only when the connection works, otherwise it would report the same failure twice.
+  // Reads a real table under the `authenticated` role: this covers the role switch
+  // *and* the table privileges that role needs. RLS returns no row for the probe
+  // user, so nothing is disclosed. Runs only when the connection works, otherwise
+  // it would report the same failure twice.
   const rls = database.ok
-    ? await check("rls", () => withUserDb(PROBE_USER_ID, (tx) => tx.execute(sql`select 1`)))
+    ? await check("rls", () =>
+        withUserDb(PROBE_USER_ID, (tx) => tx.execute(sql`select count(*) from ${assets}`)),
+      )
     : { ok: false };
   const healthy = database.ok && rls.ok;
 

@@ -147,12 +147,25 @@ indiquent « Service indisponible ») mais aucune donnée n'est accessible.
 
 `/api/health` indique précisément ce qui manque, sans jamais exposer de valeur secrète.
 
-| Réponse                                   | Cause                                        | Correction                                                                             |
-| ----------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `"status": "unconfigured"` avec `missing` | variables d'environnement absentes           | définir les variables listées, puis **redéployer**                                     |
-| `database.ok: false`                      | base injoignable ou URI incorrecte           | vérifier `DATABASE_URL` : Transaction pooler, mot de passe encodé, caractères spéciaux |
-| `rls.ok: false`                           | le rôle `authenticated` n'est pas disponible | vérifier que les migrations ont bien été appliquées sur cette base                     |
-| `"status": "ok"`                          | tout fonctionne                              | —                                                                                      |
+| Réponse                                   | Cause                                            | Correction                                                                             |
+| ----------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `"status": "unconfigured"` avec `missing` | variables d'environnement absentes               | définir les variables listées, puis **redéployer**                                     |
+| `database.ok: false`                      | base injoignable ou URI incorrecte               | vérifier `DATABASE_URL` : Transaction pooler, mot de passe encodé, caractères spéciaux |
+| `rls.ok: false`                           | le rôle `authenticated` n'a pas accès aux tables | vérifier que le schéma est installé, puis appliquer les droits ci-dessous              |
+| `"status": "ok"`                          | tout fonctionne                                  | —                                                                                      |
+
+Le contrôle `rls` lit réellement une table sous le rôle `authenticated` : il couvre donc à la fois
+le basculement de rôle et les droits de ce rôle sur les tables. Supabase accorde ces droits
+automatiquement aux tables créées dans `public` ; si ce n'était pas le cas, exécutez ceci dans le
+SQL Editor :
+
+```sql
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+```
+
+Ces droits ne contournent pas la RLS : les policies restent seules juges des lignes visibles.
 
 Les détails des erreurs restent dans les journaux du serveur ; la réponse ne contient qu'une
 référence (`reference`) permettant de retrouver la ligne correspondante.
