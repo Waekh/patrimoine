@@ -107,10 +107,17 @@ indiquent « Service indisponible ») mais aucune donnée n'est accessible.
    | `DATABASE_URL` | URI du **Transaction pooler** Supabase (port 6543) |
    | `AUTH_PROVIDER` | `supabase` |
    | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | clé `anon` du projet |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | clé `anon` ou clé `sb_publishable_…` du projet |
    | `APP_ENV` | `production` |
    | `NEXT_PUBLIC_APP_URL` | facultatif : déduit automatiquement de l'URL Vercel |
    | `DATABASE_POOL_MAX` | facultatif : 5 par défaut, adapté au serverless |
+
+   Supabase propose désormais une clé « publishable » (`sb_publishable_…`) à la place de la clé
+   `anon` historique : les deux se placent dans la même variable, et le nom
+   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` employé par les extraits Supabase est également accepté.
+   Les étapes « Install packages » et « Add files » proposées par la fenêtre *Connect* de Supabase
+   ne concernent pas ce projet : le client, le rafraîchissement de session et le middleware
+   existent déjà (`src/lib/auth/supabase/`, `src/proxy.ts`).
 
 4. **Supabase → Authentication → URL Configuration** : ajouter `https://<domaine>/auth/callback`
    aux *Redirect URLs*, sinon la confirmation d'e-mail et la réinitialisation de mot de passe échouent.

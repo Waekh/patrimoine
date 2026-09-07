@@ -67,6 +67,26 @@ describe("evaluateConfiguration", () => {
     expect(valid.ok).toBe(true);
   });
 
+  it("accepts the Supabase publishable key under its own variable name", () => {
+    const status = evaluateConfiguration({
+      DATABASE_URL: supabase.DATABASE_URL,
+      AUTH_PROVIDER: "supabase",
+      NEXT_PUBLIC_SUPABASE_URL: supabase.NEXT_PUBLIC_SUPABASE_URL,
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_abc123",
+    });
+    expect(status.ok).toBe(true);
+    if (status.ok) expect(status.env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("sb_publishable_abc123");
+  });
+
+  it("keeps an explicit anon key over the publishable alias", () => {
+    const status = evaluateConfiguration({
+      ...supabase,
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_abc123",
+    });
+    expect(status.ok).toBe(true);
+    if (status.ok) expect(status.env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("anon-key");
+  });
+
   it("derives the public URL from the Vercel deployment host", () => {
     const status = evaluateConfiguration({
       ...supabase,

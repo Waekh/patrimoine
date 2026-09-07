@@ -60,6 +60,12 @@ export function evaluateConfiguration(
   }
   const appUrl = inferAppUrl(defined);
   if (appUrl) defined.NEXT_PUBLIC_APP_URL = appUrl;
+  // Supabase now issues a "publishable" key and its own snippets name it
+  // NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. It is passed exactly where the legacy
+  // anon key was, so accept either name.
+  if (!defined.NEXT_PUBLIC_SUPABASE_ANON_KEY && defined.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
+    defined.NEXT_PUBLIC_SUPABASE_ANON_KEY = defined.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  }
 
   // Checked first: a policy violation that adding more variables cannot fix.
   const provider = defined.AUTH_PROVIDER ?? "supabase";
