@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { isAppConfigured } from "@/config/env";
 import { ResetPasswordForm } from "@/features/auth/auth-forms";
+import { ServiceUnavailable } from "@/features/auth/service-unavailable";
 import { t } from "@/lib/i18n";
 
 export const metadata: Metadata = { title: `${t("auth.resetTitle")} — ${t("app.name")}` };
 
 export default async function ResetPasswordPage({ searchParams }: PageProps<"/reset-password">) {
+  if (!isAppConfigured()) return <ServiceUnavailable />;
   const params = await searchParams;
   const token = typeof params.token === "string" ? params.token : undefined;
   return (

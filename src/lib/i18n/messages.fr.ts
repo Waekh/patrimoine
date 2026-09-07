@@ -389,6 +389,16 @@ export const fr = {
     notFound: "Page introuvable.",
     forbidden: "Accès refusé.",
     unauthenticated: "Veuillez vous connecter.",
+    title: "Une erreur est survenue.",
+    description: "Veuillez réessayer.",
+    reference: "Référence",
+    notFoundText: "La page demandée n'existe pas ou a été déplacée.",
+    backHome: "Retour à l'accueil",
+    serviceUnavailableTitle: "Service indisponible",
+    serviceUnavailable:
+      "L'application n'est pas encore configurée. La connexion et les données seront disponibles une fois la configuration terminée.",
+    serviceUnavailableHint:
+      "Administrateur : définissez les variables d'environnement du projet, puis consultez /api/health.",
   },
 } as const;
 
