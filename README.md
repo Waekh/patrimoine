@@ -100,34 +100,40 @@ indiquent « Service indisponible ») mais aucune donnée n'est accessible.
 
    La connexion directe de Supabase répond en **IPv6**. Depuis un réseau IPv4 seul, la commande
    échoue avec une erreur réseau : utilisez alors le **Session pooler** (port 5432, hôte
-   `…pooler.supabase.com`), proposé par Supabase exactement pour ce cas. Le *Transaction pooler*
+   `…pooler.supabase.com`), proposé par Supabase exactement pour ce cas. Le _Transaction pooler_
    ne convient pas ici : il est destiné à l'exécution de l'application, pas aux migrations.
 
    Si le mot de passe contient des caractères spéciaux, encodez-les en pourcentage dans l'URI.
 
    Ne pas lancer `npm run db:setup` sur Supabase : les rôles et le schéma `auth` y existent déjà.
 
-3. **Déclarer les variables sur Vercel** (Settings → Environment Variables), pour *Production* et *Preview* :
+   **Sans terminal**, utilisez l'éditeur SQL de Supabase : ouvrez `scripts/supabase-setup.sql`,
+   copiez tout le fichier, collez-le dans Supabase → SQL Editor → Run. Ce fichier est généré par
+   `npm run db:sql` à partir des migrations et renseigne aussi le journal de Drizzle, si bien
+   qu'un futur `npm run db:migrate` verra les migrations comme déjà appliquées au lieu de les
+   rejouer. Il s'exécute une seule fois, sur une base vide.
 
-   | Variable | Valeur |
-   | --- | --- |
-   | `DATABASE_URL` | URI du **Transaction pooler** Supabase (port 6543), adapté au serverless |
-   | `AUTH_PROVIDER` | `supabase` |
-   | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | clé `anon` ou clé `sb_publishable_…` du projet |
-   | `APP_ENV` | `production` |
-   | `NEXT_PUBLIC_APP_URL` | facultatif : déduit automatiquement de l'URL Vercel |
-   | `DATABASE_POOL_MAX` | facultatif : 5 par défaut, adapté au serverless |
+3. **Déclarer les variables sur Vercel** (Settings → Environment Variables), pour _Production_ et _Preview_ :
+
+   | Variable                        | Valeur                                                                   |
+   | ------------------------------- | ------------------------------------------------------------------------ |
+   | `DATABASE_URL`                  | URI du **Transaction pooler** Supabase (port 6543), adapté au serverless |
+   | `AUTH_PROVIDER`                 | `supabase`                                                               |
+   | `NEXT_PUBLIC_SUPABASE_URL`      | `https://<ref>.supabase.co`                                              |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | clé `anon` ou clé `sb_publishable_…` du projet                           |
+   | `APP_ENV`                       | `production`                                                             |
+   | `NEXT_PUBLIC_APP_URL`           | facultatif : déduit automatiquement de l'URL Vercel                      |
+   | `DATABASE_POOL_MAX`             | facultatif : 5 par défaut, adapté au serverless                          |
 
    Supabase propose désormais une clé « publishable » (`sb_publishable_…`) à la place de la clé
    `anon` historique : les deux se placent dans la même variable, et le nom
    `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` employé par les extraits Supabase est également accepté.
-   Les étapes « Install packages » et « Add files » proposées par la fenêtre *Connect* de Supabase
+   Les étapes « Install packages » et « Add files » proposées par la fenêtre _Connect_ de Supabase
    ne concernent pas ce projet : le client, le rafraîchissement de session et le middleware
    existent déjà (`src/lib/auth/supabase/`, `src/proxy.ts`).
 
 4. **Supabase → Authentication → URL Configuration** : ajouter `https://<domaine>/auth/callback`
-   aux *Redirect URLs*, sinon la confirmation d'e-mail et la réinitialisation de mot de passe échouent.
+   aux _Redirect URLs_, sinon la confirmation d'e-mail et la réinitialisation de mot de passe échouent.
 
 5. **Redéployer** : les variables d'environnement ne sont lues qu'au déploiement suivant.
 
@@ -141,12 +147,12 @@ indiquent « Service indisponible ») mais aucune donnée n'est accessible.
 
 `/api/health` indique précisément ce qui manque, sans jamais exposer de valeur secrète.
 
-| Réponse | Cause | Correction |
-| --- | --- | --- |
-| `"status": "unconfigured"` avec `missing` | variables d'environnement absentes | définir les variables listées, puis **redéployer** |
-| `database.ok: false` | base injoignable ou URI incorrecte | vérifier `DATABASE_URL` : Transaction pooler, mot de passe encodé, caractères spéciaux |
-| `rls.ok: false` | le rôle `authenticated` n'est pas disponible | vérifier que les migrations ont bien été appliquées sur cette base |
-| `"status": "ok"` | tout fonctionne | — |
+| Réponse                                   | Cause                                        | Correction                                                                             |
+| ----------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `"status": "unconfigured"` avec `missing` | variables d'environnement absentes           | définir les variables listées, puis **redéployer**                                     |
+| `database.ok: false`                      | base injoignable ou URI incorrecte           | vérifier `DATABASE_URL` : Transaction pooler, mot de passe encodé, caractères spéciaux |
+| `rls.ok: false`                           | le rôle `authenticated` n'est pas disponible | vérifier que les migrations ont bien été appliquées sur cette base                     |
+| `"status": "ok"`                          | tout fonctionne                              | —                                                                                      |
 
 Les détails des erreurs restent dans les journaux du serveur ; la réponse ne contient qu'une
 référence (`reference`) permettant de retrouver la ligne correspondante.

@@ -4,7 +4,13 @@ import postgres from "postgres";
 import { requireDatabaseUrl } from "./lib/db-url";
 
 export async function runMigrations(url: string): Promise<void> {
-  const client = postgres(url, { max: 1, prepare: false });
+  // postgres.js prints the whole notice object by default; keep only the message
+  // so a routine "already exists, skipping" does not look like a failure.
+  const client = postgres(url, {
+    max: 1,
+    prepare: false,
+    onnotice: (notice) => console.log(notice.message ?? notice),
+  });
   try {
     await migrate(drizzle(client), { migrationsFolder: "./src/db/migrations" });
   } finally {

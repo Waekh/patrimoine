@@ -21,7 +21,8 @@
     "db:setup": "tsx scripts/setup-local-db.ts",
     "db:seed": "tsx scripts/seed.ts",
     "assets:generate": "tsx scripts/generate-placeholder-assets.ts",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run build"
+    "check": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "db:sql": "tsx scripts/generate-supabase-setup.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",
