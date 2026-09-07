@@ -175,3 +175,27 @@ Locale et devise de référence dans `src/config/locale.ts`.
 ### Valorisation marché
 
 - `valuationType = MARKET` calcule `quantité × cours` uniquement si le cours est disponible dans la devise de l'actif ; sinon la valeur manuelle est conservée, `valued_at` reste nul et l'interface indique « Donnée indisponible ». Le fournisseur `mock` marque toutes ses données `freshness = "mock"`.
+
+### Décision : un déploiement non configuré doit rester lisible
+
+- **Decision** : `getConfigurationStatus()` (`src/config/env.ts`) évalue l'environnement sans lever d'exception. `getCurrentUser()` renvoie `null` si la configuration est incomplète ou si le fournisseur d'authentification échoue ; les pages publiques (accueil, `/demo`, 404) s'affichent, les pages d'authentification affichent « Service indisponible » et les routes protégées redirigent vers `/login`. `getServerEnv()` continue de lever une `ConfigurationError` pour les chemins qui ne peuvent pas fonctionner sans configuration.
+- **Reason** : un déploiement dont les variables ne sont pas encore définies renvoyait une erreur serveur sur toutes les pages, sans indication de la cause. Traiter le visiteur comme anonyme est le comportement le moins privilégié et le plus sûr.
+- **Alternatives** : laisser l'exception remonter (aucun diagnostic, page blanche) ; valider au build (impossible, les variables sont lues à l'exécution).
+
+### Décision : endpoint de diagnostic `/api/health`
+
+- **Decision** : `GET /api/health` renvoie l'état de la configuration (noms des variables manquantes, jamais de valeur), la joignabilité de la base et le succès du basculement vers le rôle `authenticated` utilisé par la RLS. Statut HTTP 200 (`ok`) ou 503 (`unconfigured` / `degraded`).
+- **Reason** : le basculement de rôle est la dépendance non évidente de l'architecture RLS ; sur une base mal migrée, il échouerait seulement après connexion d'un utilisateur. Le vérifier explicitement rend un déploiement diagnosticable sans lire les journaux de la plateforme.
+- **Alternatives** : s'en remettre aux journaux de l'hébergeur (lent, souvent tronqué).
+
+### Décision : pool de connexions dimensionné pour le serverless
+
+- **Decision** : `max` par défaut à 5 (surchargeable par `DATABASE_POOL_MAX`), `idle_timeout` 20 s, `connect_timeout` 15 s, `prepare: false`.
+- **Reason** : chaque instance serverless ouvre son propre pool ; un `max` élevé multiplié par le nombre d'instances sature le pooler Supabase.
+
+### Erreurs affichées
+
+`src/app/error.tsx`, `src/app/global-error.tsx` et `src/app/not-found.tsx` rendent un message
+générique en français avec la référence (`digest`) permettant de retrouver la trace côté serveur.
+Aucune pile d'appels n'est exposée. `src/app/(app)/loading.tsx` évite l'écran vide pendant le
+rendu serveur des pages protégées.

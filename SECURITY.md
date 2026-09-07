@@ -47,7 +47,12 @@ Les données patrimoniales sont sensibles. Principe : **NEVER TRUST THE CLIENT**
 
 - `npm audit` : `drizzle-kit` dépend d'une version d'`esbuild` signalée (advisory GHSA‑67mh‑4wv8‑2f99, serveur de dev esbuild). Impact limité à l'outillage de migration en développement ; aucune exposition en production. À réévaluer à chaque mise à jour de `drizzle-kit`.
 
-## 9. Checklist livraison
+## 9. Déploiement non configuré
+
+- Une configuration incomplète ne provoque ni erreur serveur ni accès dégradé : `getCurrentUser()` renvoie `null`, le visiteur est anonyme et les routes protégées redirigent vers `/login` (fail closed).
+- `GET /api/health` expose uniquement les **noms** des variables manquantes, jamais leurs valeurs, ainsi que des indicateurs booléens et une référence de journal. Il vérifie aussi que le basculement vers le rôle `authenticated` fonctionne : si ce basculement échoue, les requêtes échouent au lieu de contourner la RLS.
+
+## 10. Checklist livraison
 
 ```
 [ ] RLS activée et policies présentes pour chaque table

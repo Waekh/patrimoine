@@ -82,12 +82,66 @@ Les tests d'intégration et E2E utilisent `TEST_DATABASE_URL` / `E2E_DATABASE_UR
 Playwright télécharge Chromium (`npx playwright install chromium`) ; pour réutiliser un Chromium déjà
 installé, définir `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/chemin/vers/chrome`.
 
-## Déploiement
+## Déploiement sur Vercel
 
-- Next.js sur Vercel (ou tout hébergeur Node ≥ 20), Supabase pour la base et l'authentification,
-  assets statiques servis depuis `public/` (CDN de l'hébergeur).
-- Environnements : `development` (Postgres local + auth locale), `preview` et `production` (Supabase, `AUTH_PROVIDER=supabase`).
-- `npm run build` doit passer sans erreur TypeScript ni ESLint avant tout déploiement.
+L'application a besoin d'une base PostgreSQL et d'un fournisseur d'authentification :
+en production, c'est un projet Supabase. Tant que ces variables ne sont pas définies,
+le déploiement répond quand même (accueil et `/demo` s'affichent, les pages de connexion
+indiquent « Service indisponible ») mais aucune donnée n'est accessible.
+
+1. **Créer un projet Supabase** et activer l'authentification e-mail / mot de passe.
+
+2. **Appliquer les migrations** depuis votre machine, avec la connexion **directe**
+   (port 5432) et non le pooler, car les migrations créent des types, des tables et des policies :
+
+   ```bash
+   DATABASE_URL="postgresql://postgres:<mot-de-passe>@db.<ref>.supabase.co:5432/postgres" npm run db:migrate
+   ```
+
+   Ne pas lancer `npm run db:setup` sur Supabase : les rôles et le schéma `auth` y existent déjà.
+
+3. **Déclarer les variables sur Vercel** (Settings → Environment Variables), pour *Production* et *Preview* :
+
+   | Variable | Valeur |
+   | --- | --- |
+   | `DATABASE_URL` | URI du **Transaction pooler** Supabase (port 6543) |
+   | `AUTH_PROVIDER` | `supabase` |
+   | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | clé `anon` du projet |
+   | `APP_ENV` | `production` |
+   | `NEXT_PUBLIC_APP_URL` | facultatif : déduit automatiquement de l'URL Vercel |
+   | `DATABASE_POOL_MAX` | facultatif : 5 par défaut, adapté au serverless |
+
+4. **Supabase → Authentication → URL Configuration** : ajouter `https://<domaine>/auth/callback`
+   aux *Redirect URLs*, sinon la confirmation d'e-mail et la réinitialisation de mot de passe échouent.
+
+5. **Redéployer** : les variables d'environnement ne sont lues qu'au déploiement suivant.
+
+6. **Vérifier** `https://<domaine>/api/health` :
+
+   ```json
+   { "status": "ok", "database": { "ok": true }, "rls": { "ok": true } }
+   ```
+
+### Diagnostic d'un déploiement
+
+`/api/health` indique précisément ce qui manque, sans jamais exposer de valeur secrète.
+
+| Réponse | Cause | Correction |
+| --- | --- | --- |
+| `"status": "unconfigured"` avec `missing` | variables d'environnement absentes | définir les variables listées, puis **redéployer** |
+| `database.ok: false` | base injoignable ou URI incorrecte | vérifier `DATABASE_URL` (pooler, mot de passe, autorisations réseau) |
+| `rls.ok: false` | le rôle `authenticated` n'est pas disponible | vérifier que les migrations ont bien été appliquées sur cette base |
+| `"status": "ok"` | tout fonctionne | — |
+
+Les détails des erreurs restent dans les journaux du serveur ; la réponse ne contient qu'une
+référence (`reference`) permettant de retrouver la ligne correspondante.
+
+### Autres hébergeurs
+
+Tout hébergeur Node ≥ 20.9 convient (`npm run build` puis `npm run start`).
+Les assets de `public/` peuvent être servis par un CDN. Environnements prévus :
+`development` (PostgreSQL local + auth locale), `preview` et `production` (Supabase).
 
 ## Assets graphiques
 
