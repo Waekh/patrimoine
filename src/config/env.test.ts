@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { evaluateConfiguration } from "./env";
+import { isUsableSupabaseUrl } from "./supabase-credentials";
 
 const supabase = {
   DATABASE_URL: "postgres://u:p@host:6543/db",
@@ -20,20 +21,13 @@ describe("evaluateConfiguration", () => {
     expect(status.ok).toBe(false);
     // The whole list at once, so the operator configures the deployment in one pass.
     if (!status.ok) {
-      expect(status.missing).toEqual([
-        "DATABASE_URL",
-        "NEXT_PUBLIC_SUPABASE_URL",
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-      ]);
+      expect(status.missing).toEqual(["DATABASE_URL", "SUPABASE_URL", "SUPABASE_ANON_KEY"]);
     }
 
     const withoutKeys = evaluateConfiguration({ DATABASE_URL: supabase.DATABASE_URL });
     expect(withoutKeys.ok).toBe(false);
     if (!withoutKeys.ok) {
-      expect(withoutKeys.missing).toEqual([
-        "NEXT_PUBLIC_SUPABASE_URL",
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-      ]);
+      expect(withoutKeys.missing).toEqual(["SUPABASE_URL", "SUPABASE_ANON_KEY"]);
     }
   });
 
@@ -87,6 +81,51 @@ describe("evaluateConfiguration", () => {
     if (status.ok) expect(status.env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("anon-key");
   });
 
+  it("accepts the Supabase credentials without the NEXT_PUBLIC_ prefix", () => {
+    // This application never uses Supabase in the browser, so the prefix is optional.
+    const status = evaluateConfiguration({
+      DATABASE_URL: supabase.DATABASE_URL,
+      AUTH_PROVIDER: "supabase",
+      SUPABASE_URL: "https://project.supabase.co",
+      SUPABASE_PUBLISHABLE_KEY: "sb_publishable_abc123",
+    });
+    expect(status.ok).toBe(true);
+    if (status.ok) {
+      expect(status.env.NEXT_PUBLIC_SUPABASE_URL).toBe("https://project.supabase.co");
+      expect(status.env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("sb_publishable_abc123");
+    }
+  });
+
+  it("gives the prefixed names precedence when both spellings are present", () => {
+    const status = evaluateConfiguration({
+      ...supabase,
+      SUPABASE_URL: "https://other.supabase.co",
+      SUPABASE_ANON_KEY: "other",
+    });
+    expect(status.ok).toBe(true);
+    if (status.ok) {
+      expect(status.env.NEXT_PUBLIC_SUPABASE_URL).toBe(supabase.NEXT_PUBLIC_SUPABASE_URL);
+      expect(status.env.NEXT_PUBLIC_SUPABASE_ANON_KEY).toBe("anon-key");
+    }
+  });
+
+  it("names the variable the operator actually used when it is invalid", () => {
+    const prefixed = evaluateConfiguration({
+      ...supabase,
+      NEXT_PUBLIC_SUPABASE_URL: "pas-une-url",
+    });
+    expect(prefixed.ok).toBe(false);
+    if (!prefixed.ok) expect(prefixed.missing).toEqual(["NEXT_PUBLIC_SUPABASE_URL"]);
+
+    const unprefixed = evaluateConfiguration({
+      DATABASE_URL: supabase.DATABASE_URL,
+      SUPABASE_URL: "pas-une-url",
+      SUPABASE_ANON_KEY: "k",
+    });
+    expect(unprefixed.ok).toBe(false);
+    if (!unprefixed.ok) expect(unprefixed.missing).toEqual(["SUPABASE_URL"]);
+  });
+
   it("derives the public URL from the Vercel deployment host", () => {
     const status = evaluateConfiguration({
       ...supabase,
@@ -104,5 +143,17 @@ describe("evaluateConfiguration", () => {
     });
     expect(status.ok).toBe(true);
     if (status.ok) expect(status.env.NEXT_PUBLIC_APP_URL).toBe("https://patrimoine.example");
+  });
+});
+
+describe("isUsableSupabaseUrl", () => {
+  it("accepts only URLs the Supabase client can be built with", () => {
+    expect(isUsableSupabaseUrl("https://project.supabase.co")).toBe(true);
+    expect(isUsableSupabaseUrl("http://localhost:54321")).toBe(true);
+    // A typo here used to make every route fail, including the static pages.
+    expect(isUsableSupabaseUrl("pas-une-url")).toBe(false);
+    expect(isUsableSupabaseUrl("project.supabase.co")).toBe(false);
+    expect(isUsableSupabaseUrl("")).toBe(false);
+    expect(isUsableSupabaseUrl(undefined)).toBe(false);
   });
 });

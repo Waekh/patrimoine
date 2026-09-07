@@ -115,19 +115,22 @@ indiquent « Service indisponible ») mais aucune donnée n'est accessible.
 
 3. **Déclarer les variables sur Vercel** (Settings → Environment Variables), pour _Production_ et _Preview_ :
 
-   | Variable                        | Valeur                                                                   |
-   | ------------------------------- | ------------------------------------------------------------------------ |
-   | `DATABASE_URL`                  | URI du **Transaction pooler** Supabase (port 6543), adapté au serverless |
-   | `AUTH_PROVIDER`                 | `supabase`                                                               |
-   | `NEXT_PUBLIC_SUPABASE_URL`      | `https://<ref>.supabase.co`                                              |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | clé `anon` ou clé `sb_publishable_…` du projet                           |
-   | `APP_ENV`                       | `production`                                                             |
-   | `NEXT_PUBLIC_APP_URL`           | facultatif : déduit automatiquement de l'URL Vercel                      |
-   | `DATABASE_POOL_MAX`             | facultatif : 5 par défaut, adapté au serverless                          |
+   | Variable              | Valeur                                                                   |
+   | --------------------- | ------------------------------------------------------------------------ |
+   | `DATABASE_URL`        | URI du **Transaction pooler** Supabase (port 6543), adapté au serverless |
+   | `AUTH_PROVIDER`       | `supabase`                                                               |
+   | `SUPABASE_URL`        | `https://<ref>.supabase.co`                                              |
+   | `SUPABASE_ANON_KEY`   | clé `anon` ou clé `sb_publishable_…` du projet                           |
+   | `APP_ENV`             | `production`                                                             |
+   | `NEXT_PUBLIC_APP_URL` | facultatif : déduit automatiquement de l'URL Vercel                      |
+   | `DATABASE_POOL_MAX`   | facultatif : 5 par défaut, adapté au serverless                          |
 
-   Supabase propose désormais une clé « publishable » (`sb_publishable_…`) à la place de la clé
-   `anon` historique : les deux se placent dans la même variable, et le nom
-   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` employé par les extraits Supabase est également accepté.
+   Ces deux variables sont aussi acceptées sous les noms `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` et `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, qui sont ceux
+   affichés par Supabase. **Préférez les noms sans préfixe** : l'application n'utilise jamais
+   Supabase dans le navigateur, donc rien n'a besoin d'être exposé côté client, et l'hébergeur
+   n'affiche alors aucun avertissement sur le préfixe public. La clé « publishable »
+   (`sb_publishable_…`) et l'ancienne clé `anon` se placent indifféremment dans la même variable.
    Les étapes « Install packages » et « Add files » proposées par la fenêtre _Connect_ de Supabase
    ne concernent pas ce projet : le client, le rafraîchissement de session et le middleware
    existent déjà (`src/lib/auth/supabase/`, `src/proxy.ts`).

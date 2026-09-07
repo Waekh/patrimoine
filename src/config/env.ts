@@ -1,5 +1,10 @@
 import "server-only";
 import { z } from "zod";
+import {
+  resolveSupabaseCredentials,
+  SUPABASE_KEY_VARIABLE,
+  SUPABASE_URL_VARIABLE,
+} from "./supabase-credentials";
 
 /**
  * Server-side environment. Read lazily so that pages which need no
@@ -60,12 +65,11 @@ export function evaluateConfiguration(
   }
   const appUrl = inferAppUrl(defined);
   if (appUrl) defined.NEXT_PUBLIC_APP_URL = appUrl;
-  // Supabase now issues a "publishable" key and its own snippets name it
-  // NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. It is passed exactly where the legacy
-  // anon key was, so accept either name.
-  if (!defined.NEXT_PUBLIC_SUPABASE_ANON_KEY && defined.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
-    defined.NEXT_PUBLIC_SUPABASE_ANON_KEY = defined.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  }
+  // The Supabase credentials are accepted under several names (with or without
+  // the NEXT_PUBLIC_ prefix, anon or publishable key) and normalised here.
+  const credentials = resolveSupabaseCredentials(defined);
+  if (credentials.url) defined[SUPABASE_URL_VARIABLE] = credentials.url;
+  if (credentials.key) defined[SUPABASE_KEY_VARIABLE] = credentials.key;
 
   // Checked first: a policy violation that adding more variables cannot fix.
   const provider = defined.AUTH_PROVIDER ?? "supabase";
@@ -85,14 +89,21 @@ export function evaluateConfiguration(
   // Provider requirements are evaluated even when the base parse failed, so the
   // operator gets the complete list in one pass instead of one variable at a time.
   if (provider === "supabase") {
-    if (!defined.NEXT_PUBLIC_SUPABASE_URL) missing.add("NEXT_PUBLIC_SUPABASE_URL");
-    if (!defined.NEXT_PUBLIC_SUPABASE_ANON_KEY) missing.add("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    if (!credentials.url) missing.add(credentials.urlName);
+    if (!credentials.key) missing.add(credentials.keyName);
   } else if (provider === "local" && !defined.LOCAL_AUTH_SECRET) {
     missing.add("LOCAL_AUTH_SECRET");
   }
 
   if (missing.size > 0) {
-    const names = [...missing];
+    // Report the spelling the operator used rather than the internal one.
+    const names = [...missing].map((name) =>
+      name === SUPABASE_URL_VARIABLE
+        ? credentials.urlName
+        : name === SUPABASE_KEY_VARIABLE
+          ? credentials.keyName
+          : name,
+    );
     return {
       ok: false,
       missing: names,

@@ -25,7 +25,7 @@ Les données patrimoniales sont sensibles. Principe : **NEVER TRUST THE CLIENT**
 ## 4. Secrets
 
 - Aucune clé secrète dans le client, `public/` ou `NEXT_PUBLIC_*`.
-- Deux variables sont **publiques par conception** et atteignent le navigateur : `NEXT_PUBLIC_SUPABASE_URL` et la clé `anon` / `sb_publishable_…`. C'est le fonctionnement prévu d'un client Supabase : la protection des données repose sur la Row Level Security, pas sur la dissimulation de cette clé. Sur un hébergeur qui classe les variables, elles doivent être marquées comme configuration et non comme secret.
+- L'adresse du projet Supabase et la clé `anon` / `sb_publishable_…` sont conçues pour être publiques : la protection des données repose sur la Row Level Security, pas sur leur dissimulation. Cette application ne créant jamais de client Supabase dans le navigateur, elles sont lues uniquement côté serveur : préférez les noms `SUPABASE_URL` et `SUPABASE_ANON_KEY`, sans préfixe `NEXT_PUBLIC_`, pour qu'aucune valeur ne parte dans le client. Les noms préfixés restent acceptés.
 - À l'inverse, `DATABASE_URL` (qui contient le mot de passe de la base) et `SUPABASE_SERVICE_ROLE_KEY` sont des secrets : ils ne doivent jamais porter le préfixe `NEXT_PUBLIC_` ni être exposés au navigateur.
 - `.env` est ignoré par Git ; `.env.example` documente les variables.
 - `SUPABASE_SERVICE_ROLE_KEY` est optionnelle et réservée au serveur.

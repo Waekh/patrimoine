@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isUsableSupabaseUrl, resolveSupabaseCredentials } from "@/config/supabase-credentials";
 import { LOCAL_SESSION_COOKIE } from "@/lib/auth/local/session";
 
 const PROTECTED_PREFIXES = [
@@ -30,22 +31,29 @@ export async function proxy(request: NextRequest) {
   if (process.env.AUTH_PROVIDER === "local") {
     authenticated = Boolean(request.cookies.get(LOCAL_SESSION_COOKIE)?.value);
   } else {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (url && key) {
-      const supabase = createServerClient(url, key, {
-        cookies: {
-          getAll: () => request.cookies.getAll(),
-          setAll: (cookiesToSet) => {
-            for (const { name, value } of cookiesToSet) request.cookies.set(name, value);
-            response = NextResponse.next({ request });
-            for (const { name, value, options } of cookiesToSet)
-              response.cookies.set(name, value, options);
+    // Read through process.env as a whole: a static `process.env.NEXT_PUBLIC_*`
+    // access is inlined at build time and would freeze the value.
+    const { url, key } = resolveSupabaseCredentials(process.env);
+    if (isUsableSupabaseUrl(url) && key) {
+      try {
+        const supabase = createServerClient(url, key, {
+          cookies: {
+            getAll: () => request.cookies.getAll(),
+            setAll: (cookiesToSet) => {
+              for (const { name, value } of cookiesToSet) request.cookies.set(name, value);
+              response = NextResponse.next({ request });
+              for (const { name, value, options } of cookiesToSet)
+                response.cookies.set(name, value, options);
+            },
           },
-        },
-      });
-      const { data } = await supabase.auth.getUser();
-      authenticated = Boolean(data.user);
+        });
+        const { data } = await supabase.auth.getUser();
+        authenticated = Boolean(data.user);
+      } catch {
+        // This runs on every request: a provider failure must degrade to
+        // "anonymous" rather than return an error for the whole site.
+        authenticated = false;
+      }
     }
   }
 
