@@ -6,8 +6,15 @@ import * as schema from "./schema";
 export type Database = ReturnType<typeof createDatabase>;
 
 function createDatabase(url: string) {
-  // `prepare: false` is required for Supabase's transaction pooler (PgBouncer).
-  const client = postgres(url, { prepare: false, max: 10 });
+  const client = postgres(url, {
+    // Required by Supabase's transaction pooler (PgBouncer): no prepared statements.
+    prepare: false,
+    // Serverless runtimes start many short-lived instances: keep each pool small
+    // and let idle connections go so the database is not saturated.
+    max: Number(process.env.DATABASE_POOL_MAX ?? 5),
+    idle_timeout: 20,
+    connect_timeout: 15,
+  });
   return drizzle(client, { schema, casing: "snake_case" });
 }
 

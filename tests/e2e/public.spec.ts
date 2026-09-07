@@ -25,4 +25,28 @@ test.describe("Public pages", () => {
     await expect(panel.getByText("Crédit immobilier")).toBeVisible();
     await expect(page.locator("canvas")).toHaveCount(1);
   });
+
+  test("unknown routes render the French not-found page", async ({ page }) => {
+    const response = await page.goto("/cette-page-nexiste-pas");
+    expect(response?.status()).toBe(404);
+    await expect(page.getByRole("heading", { name: "Page introuvable." })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Retour à l'accueil" })).toBeVisible();
+  });
+
+  test("the health endpoint reports configuration, database and RLS", async ({ request }) => {
+    const response = await request.get("/api/health");
+    expect(response.status()).toBe(200);
+    const body = (await response.json()) as {
+      status: string;
+      configuration: { ok: boolean };
+      database: { ok: boolean };
+      rls: { ok: boolean };
+    };
+    expect(body.status).toBe("ok");
+    expect(body.configuration.ok).toBe(true);
+    expect(body.database.ok).toBe(true);
+    // The `authenticated` role switch is what enforces RLS on every user query.
+    expect(body.rls.ok).toBe(true);
+    expect(JSON.stringify(body)).not.toContain("postgres://");
+  });
 });
