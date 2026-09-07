@@ -143,6 +143,10 @@ indiquent « Service indisponible ») mais aucune donnée n'est accessible.
 
    Les e-mails déjà envoyés conservent l'ancien lien : demandez-en un nouveau après correction.
 
+   Le message de confirmation d'inscription est fourni dans
+   `supabase/emails/confirm-signup.html`, à coller dans Authentication → Emails → _Confirm signup_,
+   avec pour objet « Confirmez votre adresse e-mail ».
+
 5. **Redéployer** : les variables d'environnement ne sont lues qu'au déploiement suivant.
 
 6. **Vérifier** `https://<domaine>/api/health` :
