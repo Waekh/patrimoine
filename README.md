@@ -98,13 +98,20 @@ indiquent « Service indisponible ») mais aucune donnée n'est accessible.
    DATABASE_URL="postgresql://postgres:<mot-de-passe>@db.<ref>.supabase.co:5432/postgres" npm run db:migrate
    ```
 
+   La connexion directe de Supabase répond en **IPv6**. Depuis un réseau IPv4 seul, la commande
+   échoue avec une erreur réseau : utilisez alors le **Session pooler** (port 5432, hôte
+   `…pooler.supabase.com`), proposé par Supabase exactement pour ce cas. Le *Transaction pooler*
+   ne convient pas ici : il est destiné à l'exécution de l'application, pas aux migrations.
+
+   Si le mot de passe contient des caractères spéciaux, encodez-les en pourcentage dans l'URI.
+
    Ne pas lancer `npm run db:setup` sur Supabase : les rôles et le schéma `auth` y existent déjà.
 
 3. **Déclarer les variables sur Vercel** (Settings → Environment Variables), pour *Production* et *Preview* :
 
    | Variable | Valeur |
    | --- | --- |
-   | `DATABASE_URL` | URI du **Transaction pooler** Supabase (port 6543) |
+   | `DATABASE_URL` | URI du **Transaction pooler** Supabase (port 6543), adapté au serverless |
    | `AUTH_PROVIDER` | `supabase` |
    | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | clé `anon` ou clé `sb_publishable_…` du projet |
@@ -137,7 +144,7 @@ indiquent « Service indisponible ») mais aucune donnée n'est accessible.
 | Réponse | Cause | Correction |
 | --- | --- | --- |
 | `"status": "unconfigured"` avec `missing` | variables d'environnement absentes | définir les variables listées, puis **redéployer** |
-| `database.ok: false` | base injoignable ou URI incorrecte | vérifier `DATABASE_URL` (pooler, mot de passe, autorisations réseau) |
+| `database.ok: false` | base injoignable ou URI incorrecte | vérifier `DATABASE_URL` : Transaction pooler, mot de passe encodé, caractères spéciaux |
 | `rls.ok: false` | le rôle `authenticated` n'est pas disponible | vérifier que les migrations ont bien été appliquées sur cette base |
 | `"status": "ok"` | tout fonctionne | — |
 
