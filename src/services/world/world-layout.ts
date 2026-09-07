@@ -1,0 +1,284 @@
+import { DISTRICT_IDS, type DistrictId } from "@/config/districts";
+import { SPRITE_IDS } from "@/config/sprites";
+import type {
+  DistrictArea,
+  GridPosition,
+  WorldBuilding,
+  WorldCharacter,
+  WorldDecoration,
+  WorldEntity,
+  WorldTerrainTile,
+} from "@/types/world";
+import { createSeededRandom } from "./seeded-random";
+
+export interface LayoutResult {
+  terrain: WorldTerrainTile[];
+  buildings: WorldBuilding[];
+  decorations: WorldDecoration[];
+  characters: WorldCharacter[];
+  districts: DistrictArea[];
+  /** Entities that did not fit in their district (world too small). */
+  unplaced: WorldEntity[];
+}
+
+interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Occupancy grid used for collision detection. */
+class Occupancy {
+  private readonly cells: Uint8Array;
+  constructor(readonly size: number) {
+    this.cells = new Uint8Array(size * size);
+  }
+  isFree(x: number, y: number): boolean {
+    if (x < 0 || y < 0 || x >= this.size || y >= this.size) return false;
+    return this.cells[y * this.size + x] === 0;
+  }
+  areaFree(x: number, y: number, w: number, h: number): boolean {
+    for (let dy = 0; dy < h; dy += 1)
+      for (let dx = 0; dx < w; dx += 1) if (!this.isFree(x + dx, y + dy)) return false;
+    return true;
+  }
+  occupy(x: number, y: number, w: number, h: number): void {
+    for (let dy = 0; dy < h; dy += 1)
+      for (let dx = 0; dx < w; dx += 1) this.cells[(y + dy) * this.size + x + dx] = 1;
+  }
+}
+
+/**
+ * Districts are the four quadrants around a central road cross; the
+ * alternative district takes the lower half of the south-east quadrant.
+ */
+export function computeDistrictRects(mapSize: number): Record<DistrictId, Rect> {
+  const road = Math.floor(mapSize / 2);
+  const q = road - 1; // usable width of a quadrant, one tile margin from the roads
+  const east = road + 2;
+  const seSplit = Math.floor(q / 2);
+  return {
+    HOME_DISTRICT: { x: 1, y: 1, w: q, h: q },
+    FINANCE_DISTRICT: { x: east, y: 1, w: mapSize - east - 1, h: q },
+    CASH_DISTRICT: { x: 1, y: east, w: q, h: mapSize - east - 1 },
+    REAL_ESTATE_DISTRICT: { x: east, y: east, w: mapSize - east - 1, h: seSplit },
+    ALTERNATIVE_DISTRICT: {
+      x: east,
+      y: east + seSplit + 1,
+      w: mapSize - east - 1,
+      h: mapSize - east - seSplit - 2,
+    },
+  };
+}
+
+function buildTerrain(mapSize: number, occupancy: Occupancy): WorldTerrainTile[] {
+  const road = Math.floor(mapSize / 2);
+  const tiles: WorldTerrainTile[] = [];
+  // Small pond in the south-west corner: purely decorative, never buildable.
+  const pond = { x: 1, y: mapSize - 4, w: 3, h: 3 };
+  for (let y = 0; y < mapSize; y += 1) {
+    for (let x = 0; x < mapSize; x += 1) {
+      const onRoadX = x === road || x === road + 1;
+      const onRoadY = y === road || y === road + 1;
+      if (onRoadX || onRoadY) {
+        const spriteId =
+          onRoadX && onRoadY
+            ? SPRITE_IDS.roadCross
+            : onRoadX
+              ? SPRITE_IDS.roadNS
+              : SPRITE_IDS.roadEW;
+        tiles.push({ x, y, kind: "ROAD", spriteId });
+        occupancy.occupy(x, y, 1, 1);
+      } else if (x >= pond.x && x < pond.x + pond.w && y >= pond.y && y < pond.y + pond.h) {
+        tiles.push({ x, y, kind: "WATER", spriteId: SPRITE_IDS.terrainWater });
+        occupancy.occupy(x, y, 1, 1);
+      } else {
+        tiles.push({ x, y, kind: "GRASS", spriteId: SPRITE_IDS.terrainGrass });
+      }
+    }
+  }
+  return tiles;
+}
+
+/**
+ * Buildings are placed by priority (value desc) on a spaced sub-grid inside
+ * their district, row by row, so the result is stable when values change.
+ */
+function placeEntities(
+  entities: readonly WorldEntity[],
+  rects: Record<DistrictId, Rect>,
+  occupancy: Occupancy,
+) {
+  const buildings: WorldBuilding[] = [];
+  const unplaced: WorldEntity[] = [];
+  const counts: Record<DistrictId, number> = {
+    HOME_DISTRICT: 0,
+    FINANCE_DISTRICT: 0,
+    REAL_ESTATE_DISTRICT: 0,
+    CASH_DISTRICT: 0,
+    ALTERNATIVE_DISTRICT: 0,
+  };
+  const sorted = [...entities].sort(
+    (a, b) => b.valueCents - a.valueCents || a.assetId.localeCompare(b.assetId),
+  );
+  for (const entity of sorted) {
+    const rect = rects[entity.district];
+    const { w, h } = entity.footprint;
+    let placed: GridPosition | null = null;
+    // Stride of 2 keeps one free tile between buildings for readability.
+    for (let y = rect.y; y + h <= rect.y + rect.h && !placed; y += 2) {
+      for (let x = rect.x; x + w <= rect.x + rect.w; x += 2) {
+        if (occupancy.areaFree(x, y, w, h)) {
+          placed = { x, y };
+          break;
+        }
+      }
+    }
+    if (!placed) {
+      unplaced.push(entity);
+      continue;
+    }
+    occupancy.occupy(placed.x, placed.y, w, h);
+    counts[entity.district] += 1;
+    buildings.push({
+      id: `building_${entity.assetId}`,
+      type: entity.buildingType,
+      level: entity.level,
+      position: placed,
+      footprint: entity.footprint,
+      spriteId: entity.spriteId,
+      district: entity.district,
+      assetId: entity.assetId,
+      assetCategory: entity.assetCategory,
+      label: entity.label,
+      valueCents: entity.valueCents,
+      currency: entity.currency,
+      linkedLiabilityIds: entity.linkedLiabilityIds,
+      debtRatioBps: entity.debtRatioBps,
+      nextLevelAtCents: entity.nextLevelAtCents,
+    });
+  }
+  return { buildings, unplaced, counts };
+}
+
+function placeDecorations(
+  mapSize: number,
+  rects: Record<DistrictId, Rect>,
+  occupancy: Occupancy,
+  random: () => number,
+  cityLevel: number,
+) {
+  const decorations: WorldDecoration[] = [];
+  const density = 0.12 + Math.min(0.2, cityLevel * 0.02);
+  for (let y = 0; y < mapSize; y += 1) {
+    for (let x = 0; x < mapSize; x += 1) {
+      if (!occupancy.isFree(x, y)) continue;
+      const r = random();
+      const border = x === 0 || y === 0 || x === mapSize - 1 || y === mapSize - 1;
+      const threshold = border ? 0.55 : density;
+      if (r < threshold) {
+        const spriteId = random() < 0.3 ? SPRITE_IDS.treeSmall : SPRITE_IDS.treeBasic;
+        decorations.push({ id: `tree_${x}_${y}`, kind: "TREE", position: { x, y }, spriteId });
+        occupancy.occupy(x, y, 1, 1);
+      }
+    }
+  }
+  // A park in the centre of the home district when the map is otherwise empty.
+  const home = rects.HOME_DISTRICT;
+  const px = home.x + Math.floor(home.w / 2);
+  const py = home.y + Math.floor(home.h / 2);
+  if (occupancy.isFree(px, py)) {
+    decorations.push({
+      id: `park_${px}_${py}`,
+      kind: "PARK",
+      position: { x: px, y: py },
+      spriteId: SPRITE_IDS.park,
+    });
+    occupancy.occupy(px, py, 1, 1);
+  }
+  return decorations;
+}
+
+function placeCharacters(mapSize: number, random: () => number, count: number): WorldCharacter[] {
+  const road = Math.floor(mapSize / 2);
+  const characters: WorldCharacter[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const horizontal = random() < 0.5;
+    const start = Math.floor(random() * (mapSize - 2)) + 1;
+    const end = Math.floor(random() * (mapSize - 2)) + 1;
+    const from = horizontal ? { x: start, y: road } : { x: road, y: start };
+    const to = horizontal ? { x: end, y: road } : { x: road, y: end };
+    characters.push({
+      id: `character_${i}`,
+      position: from,
+      spriteId: SPRITE_IDS.characterBasic,
+      path: [from, to],
+    });
+  }
+  return characters;
+}
+
+/**
+ * WorldLayoutEngine: deterministic placement with collision validation.
+ * Same entities + same seed -> same layout.
+ */
+export function layoutWorld(
+  entities: readonly WorldEntity[],
+  options: { mapSize: number; seed: number; cityLevel: number },
+): LayoutResult {
+  const { mapSize, seed, cityLevel } = options;
+  const occupancy = new Occupancy(mapSize);
+  const rects = computeDistrictRects(mapSize);
+  const terrain = buildTerrain(mapSize, occupancy);
+  const { buildings, unplaced, counts } = placeEntities(entities, rects, occupancy);
+  const random = createSeededRandom(seed);
+  const decorations = placeDecorations(mapSize, rects, occupancy, random, cityLevel);
+  const characters = placeCharacters(
+    mapSize,
+    random,
+    Math.min(4, 1 + Math.floor(buildings.length / 2)),
+  );
+  const districts: DistrictArea[] = DISTRICT_IDS.map((id) => ({
+    id,
+    ...rects[id],
+    buildingCount: counts[id],
+  }));
+  validateLayout(mapSize, buildings, decorations, terrain);
+  return { terrain, buildings, decorations, characters, districts, unplaced };
+}
+
+/** Throws when two footprints overlap or leave the map: a bug, never a runtime state. */
+export function validateLayout(
+  mapSize: number,
+  buildings: readonly WorldBuilding[],
+  decorations: readonly WorldDecoration[],
+  terrain: readonly WorldTerrainTile[],
+): void {
+  const seen = new Set<string>();
+  const blocked = new Set(terrain.filter((t) => t.kind !== "GRASS").map((t) => `${t.x}:${t.y}`));
+  const claim = (x: number, y: number, owner: string) => {
+    if (x < 0 || y < 0 || x >= mapSize || y >= mapSize)
+      throw new Error(`Hors carte : ${owner} (${x},${y})`);
+    const key = `${x}:${y}`;
+    if (seen.has(key) || blocked.has(key)) throw new Error(`Chevauchement : ${owner} (${x},${y})`);
+    seen.add(key);
+  };
+  for (const b of buildings) {
+    for (let dy = 0; dy < b.footprint.h; dy += 1)
+      for (let dx = 0; dx < b.footprint.w; dx += 1)
+        claim(b.position.x + dx, b.position.y + dy, b.id);
+  }
+  for (const d of decorations) claim(d.position.x, d.position.y, d.id);
+}
+
+/** Deterministic isometric draw order: back-to-front by (x + y), then x. */
+export function zIndexOf(position: GridPosition, footprint: Footprint = { w: 1, h: 1 }): number {
+  // Use the far corner of the footprint so 2x2 buildings sort behind 1x1 neighbours in front of them.
+  return (
+    (position.x + footprint.w - 1 + position.y + footprint.h - 1) * 1000 +
+    (position.x + footprint.w - 1)
+  );
+}
+
+type Footprint = { w: number; h: number };

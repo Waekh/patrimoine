@@ -1,0 +1,922 @@
+{
+  "version": 1,
+  "basePath": "/assets/",
+  "tile": {
+    "width": 64,
+    "height": 32
+  },
+  "assets": [
+    {
+      "id": "terrain_grass",
+      "type": "terrain",
+      "file": "world/terrain/terrain_grass.png",
+      "width": 64,
+      "height": 32,
+      "anchor": {
+        "x": 32,
+        "y": 16
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "terrain_water",
+      "type": "terrain",
+      "file": "world/terrain/terrain_water.png",
+      "width": 64,
+      "height": 32,
+      "anchor": {
+        "x": 32,
+        "y": 16
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "road_ns",
+      "type": "road",
+      "file": "world/roads/road_ns.png",
+      "width": 64,
+      "height": 32,
+      "anchor": {
+        "x": 32,
+        "y": 16
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "road_ew",
+      "type": "road",
+      "file": "world/roads/road_ew.png",
+      "width": 64,
+      "height": 32,
+      "anchor": {
+        "x": 32,
+        "y": 16
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "road_cross",
+      "type": "road",
+      "file": "world/roads/road_cross.png",
+      "width": 64,
+      "height": 32,
+      "anchor": {
+        "x": 32,
+        "y": 16
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "house_lv1",
+      "type": "building",
+      "category": "real_estate",
+      "level": 1,
+      "file": "world/buildings/house_lv1.png",
+      "width": 72,
+      "height": 68,
+      "anchor": {
+        "x": 36,
+        "y": 48
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "house_lv2",
+      "type": "building",
+      "category": "real_estate",
+      "level": 2,
+      "file": "world/buildings/house_lv2.png",
+      "width": 72,
+      "height": 72,
+      "anchor": {
+        "x": 36,
+        "y": 52
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "house_lv3",
+      "type": "building",
+      "category": "real_estate",
+      "level": 3,
+      "file": "world/buildings/house_lv3.png",
+      "width": 72,
+      "height": 76,
+      "anchor": {
+        "x": 36,
+        "y": 56
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "house_lv4",
+      "type": "building",
+      "category": "real_estate",
+      "level": 4,
+      "file": "world/buildings/house_lv4.png",
+      "width": 72,
+      "height": 80,
+      "anchor": {
+        "x": 36,
+        "y": 60
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "house_lv5",
+      "type": "building",
+      "category": "real_estate",
+      "level": 5,
+      "file": "world/buildings/house_lv5.png",
+      "width": 72,
+      "height": 86,
+      "anchor": {
+        "x": 36,
+        "y": 66
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "apartment_lv1",
+      "type": "building",
+      "category": "real_estate",
+      "level": 1,
+      "file": "world/buildings/apartment_lv1.png",
+      "width": 72,
+      "height": 72,
+      "anchor": {
+        "x": 36,
+        "y": 52
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "apartment_lv2",
+      "type": "building",
+      "category": "real_estate",
+      "level": 2,
+      "file": "world/buildings/apartment_lv2.png",
+      "width": 72,
+      "height": 84,
+      "anchor": {
+        "x": 36,
+        "y": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "apartment_lv3",
+      "type": "building",
+      "category": "real_estate",
+      "level": 3,
+      "file": "world/buildings/apartment_lv3.png",
+      "width": 72,
+      "height": 96,
+      "anchor": {
+        "x": 36,
+        "y": 76
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "apartment_lv4",
+      "type": "building",
+      "category": "real_estate",
+      "level": 4,
+      "file": "world/buildings/apartment_lv4.png",
+      "width": 136,
+      "height": 136,
+      "anchor": {
+        "x": 68,
+        "y": 100
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "placeholder": true
+    },
+    {
+      "id": "apartment_lv5",
+      "type": "building",
+      "category": "real_estate",
+      "level": 5,
+      "file": "world/buildings/apartment_lv5.png",
+      "width": 136,
+      "height": 156,
+      "anchor": {
+        "x": 68,
+        "y": 120
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "placeholder": true
+    },
+    {
+      "id": "bank_lv1",
+      "type": "building",
+      "category": "cash",
+      "level": 1,
+      "file": "world/buildings/bank_lv1.png",
+      "width": 72,
+      "height": 64,
+      "anchor": {
+        "x": 36,
+        "y": 44
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "bank_lv2",
+      "type": "building",
+      "category": "cash",
+      "level": 2,
+      "file": "world/buildings/bank_lv2.png",
+      "width": 72,
+      "height": 70,
+      "anchor": {
+        "x": 36,
+        "y": 50
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "bank_lv3",
+      "type": "building",
+      "category": "cash",
+      "level": 3,
+      "file": "world/buildings/bank_lv3.png",
+      "width": 72,
+      "height": 76,
+      "anchor": {
+        "x": 36,
+        "y": 56
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "bank_lv4",
+      "type": "building",
+      "category": "cash",
+      "level": 4,
+      "file": "world/buildings/bank_lv4.png",
+      "width": 136,
+      "height": 116,
+      "anchor": {
+        "x": 68,
+        "y": 80
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "placeholder": true
+    },
+    {
+      "id": "bank_lv5",
+      "type": "building",
+      "category": "cash",
+      "level": 5,
+      "file": "world/buildings/bank_lv5.png",
+      "width": 136,
+      "height": 128,
+      "anchor": {
+        "x": 68,
+        "y": 92
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "placeholder": true
+    },
+    {
+      "id": "vault_lv1",
+      "type": "building",
+      "category": "cash",
+      "level": 1,
+      "file": "world/buildings/vault_lv1.png",
+      "width": 72,
+      "height": 58,
+      "anchor": {
+        "x": 36,
+        "y": 38
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "vault_lv2",
+      "type": "building",
+      "category": "cash",
+      "level": 2,
+      "file": "world/buildings/vault_lv2.png",
+      "width": 72,
+      "height": 62,
+      "anchor": {
+        "x": 36,
+        "y": 42
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "vault_lv3",
+      "type": "building",
+      "category": "cash",
+      "level": 3,
+      "file": "world/buildings/vault_lv3.png",
+      "width": 72,
+      "height": 66,
+      "anchor": {
+        "x": 36,
+        "y": 46
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "vault_lv4",
+      "type": "building",
+      "category": "cash",
+      "level": 4,
+      "file": "world/buildings/vault_lv4.png",
+      "width": 136,
+      "height": 104,
+      "anchor": {
+        "x": 68,
+        "y": 68
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "placeholder": true
+    },
+    {
+      "id": "vault_lv5",
+      "type": "building",
+      "category": "cash",
+      "level": 5,
+      "file": "world/buildings/vault_lv5.png",
+      "width": 136,
+      "height": 112,
+      "anchor": {
+        "x": 68,
+        "y": 76
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "placeholder": true
+    },
+    {
+      "id": "financial_lv1",
+      "type": "building",
+      "category": "financial",
+      "level": 1,
+      "file": "world/buildings/financial_lv1.png",
+      "width": 72,
+      "height": 80,
+      "anchor": {
+        "x": 36,
+        "y": 60
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "financial_lv2",
+      "type": "building",
+      "category": "financial",
+      "level": 2,
+      "file": "world/buildings/financial_lv2.png",
+      "width": 72,
+      "height": 96,
+      "anchor": {
+        "x": 36,
+        "y": 76
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "financial_lv3",
+      "type": "building",
+      "category": "financial",
+      "level": 3,
+      "file": "world/buildings/financial_lv3.png",
+      "width": 72,
+      "height": 112,
+      "anchor": {
+        "x": 36,
+        "y": 92
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "financial_lv4",
+      "type": "building",
+      "category": "financial",
+      "level": 4,
+      "file": "world/buildings/financial_lv4.png",
+      "width": 136,
+      "height": 160,
+      "anchor": {
+        "x": 68,
+        "y": 124
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "placeholder": true
+    },
+    {
+      "id": "financial_lv5",
+      "type": "building",
+      "category": "financial",
+      "level": 5,
+      "file": "world/buildings/financial_lv5.png",
+      "width": 136,
+      "height": 184,
+      "anchor": {
+        "x": 68,
+        "y": 148
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "placeholder": true
+    },
+    {
+      "id": "market_lv1",
+      "type": "building",
+      "category": "financial",
+      "level": 1,
+      "file": "world/buildings/market_lv1.png",
+      "width": 72,
+      "height": 68,
+      "anchor": {
+        "x": 36,
+        "y": 48
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "market_lv2",
+      "type": "building",
+      "category": "financial",
+      "level": 2,
+      "file": "world/buildings/market_lv2.png",
+      "width": 72,
+      "height": 76,
+      "anchor": {
+        "x": 36,
+        "y": 56
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "market_lv3",
+      "type": "building",
+      "category": "financial",
+      "level": 3,
+      "file": "world/buildings/market_lv3.png",
+      "width": 72,
+      "height": 88,
+      "anchor": {
+        "x": 36,
+        "y": 68
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "market_lv4",
+      "type": "building",
+      "category": "financial",
+      "level": 4,
+      "file": "world/buildings/market_lv4.png",
+      "width": 136,
+      "height": 132,
+      "anchor": {
+        "x": 68,
+        "y": 96
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "placeholder": true
+    },
+    {
+      "id": "market_lv5",
+      "type": "building",
+      "category": "financial",
+      "level": 5,
+      "file": "world/buildings/market_lv5.png",
+      "width": 136,
+      "height": 148,
+      "anchor": {
+        "x": 68,
+        "y": 112
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "placeholder": true
+    },
+    {
+      "id": "realestate_lv1",
+      "type": "building",
+      "category": "real_estate",
+      "level": 1,
+      "file": "world/buildings/realestate_lv1.png",
+      "width": 72,
+      "height": 70,
+      "anchor": {
+        "x": 36,
+        "y": 50
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "realestate_lv2",
+      "type": "building",
+      "category": "real_estate",
+      "level": 2,
+      "file": "world/buildings/realestate_lv2.png",
+      "width": 72,
+      "height": 80,
+      "anchor": {
+        "x": 36,
+        "y": 60
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "realestate_lv3",
+      "type": "building",
+      "category": "real_estate",
+      "level": 3,
+      "file": "world/buildings/realestate_lv3.png",
+      "width": 72,
+      "height": 92,
+      "anchor": {
+        "x": 36,
+        "y": 72
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "realestate_lv4",
+      "type": "building",
+      "category": "real_estate",
+      "level": 4,
+      "file": "world/buildings/realestate_lv4.png",
+      "width": 136,
+      "height": 136,
+      "anchor": {
+        "x": 68,
+        "y": 100
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "placeholder": true
+    },
+    {
+      "id": "realestate_lv5",
+      "type": "building",
+      "category": "real_estate",
+      "level": 5,
+      "file": "world/buildings/realestate_lv5.png",
+      "width": 136,
+      "height": 152,
+      "anchor": {
+        "x": 68,
+        "y": 116
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "placeholder": true
+    },
+    {
+      "id": "warehouse_lv1",
+      "type": "building",
+      "category": "alternative",
+      "level": 1,
+      "file": "world/buildings/warehouse_lv1.png",
+      "width": 72,
+      "height": 56,
+      "anchor": {
+        "x": 36,
+        "y": 36
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "warehouse_lv2",
+      "type": "building",
+      "category": "alternative",
+      "level": 2,
+      "file": "world/buildings/warehouse_lv2.png",
+      "width": 72,
+      "height": 60,
+      "anchor": {
+        "x": 36,
+        "y": 40
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "warehouse_lv3",
+      "type": "building",
+      "category": "alternative",
+      "level": 3,
+      "file": "world/buildings/warehouse_lv3.png",
+      "width": 72,
+      "height": 64,
+      "anchor": {
+        "x": 36,
+        "y": 44
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "warehouse_lv4",
+      "type": "building",
+      "category": "alternative",
+      "level": 4,
+      "file": "world/buildings/warehouse_lv4.png",
+      "width": 136,
+      "height": 102,
+      "anchor": {
+        "x": 68,
+        "y": 66
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "placeholder": true
+    },
+    {
+      "id": "warehouse_lv5",
+      "type": "building",
+      "category": "alternative",
+      "level": 5,
+      "file": "world/buildings/warehouse_lv5.png",
+      "width": 136,
+      "height": 108,
+      "anchor": {
+        "x": 68,
+        "y": 72
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "placeholder": true
+    },
+    {
+      "id": "tree_basic",
+      "type": "nature",
+      "file": "world/nature/tree_basic.png",
+      "width": 32,
+      "height": 48,
+      "anchor": {
+        "x": 16,
+        "y": 40
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "tree_small",
+      "type": "nature",
+      "file": "world/nature/tree_small.png",
+      "width": 32,
+      "height": 48,
+      "anchor": {
+        "x": 16,
+        "y": 40
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "park_lv1",
+      "type": "decoration",
+      "file": "world/decorations/park_lv1.png",
+      "width": 64,
+      "height": 48,
+      "anchor": {
+        "x": 32,
+        "y": 32
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "character_basic",
+      "type": "character",
+      "file": "world/characters/character_basic.png",
+      "width": 16,
+      "height": 32,
+      "anchor": {
+        "x": 8,
+        "y": 28
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "selection_ring",
+      "type": "ui",
+      "file": "ui/selection_ring_1x1.png",
+      "width": 68,
+      "height": 36,
+      "anchor": {
+        "x": 34,
+        "y": 18
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "selection_ring_2x2",
+      "type": "ui",
+      "file": "ui/selection_ring_2x2.png",
+      "width": 132,
+      "height": 68,
+      "anchor": {
+        "x": 66,
+        "y": 34
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "placeholder": true
+    },
+    {
+      "id": "scaffold",
+      "type": "effect",
+      "file": "world/effects/scaffold.png",
+      "width": 64,
+      "height": 64,
+      "anchor": {
+        "x": 32,
+        "y": 48
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    }
+  ]
+}

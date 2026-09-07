@@ -1,0 +1,28 @@
+/** Palette from PIXEL_ART_BIBLE.md. Placeholder generator and any future tooling read from here. */
+export const PIXEL_PALETTE = {
+  outline: "#2b2a33",
+  grass: "#7fb069",
+  grassDark: "#5f8d4e",
+  water: "#4f8fc0",
+  waterDark: "#3a6f9c",
+  road: "#9d9a92",
+  roadLine: "#e8e4d8",
+  wall: "#e7d8bf",
+  wallDark: "#c8b593",
+  roof: "#b8433a",
+  roofDark: "#8e332c",
+  stone: "#b9bcc4",
+  stoneDark: "#8f939c",
+  glass: "#7fc3d8",
+  glassDark: "#4e93a8",
+  brick: "#c9775a",
+  brickDark: "#9a5540",
+  wood: "#8a6a45",
+  leaf: "#4f9a4a",
+  leafDark: "#356d33",
+  gold: "#e0b84a",
+  skin: "#f1c9a5",
+  shadow: "#1b1a22",
+  selection: "#fff3b0",
+} as const;
+export type PaletteColor = keyof typeof PIXEL_PALETTE;
