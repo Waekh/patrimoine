@@ -49,7 +49,10 @@ export class ConfigurationError extends Error {
  * keeps confirmation and password-reset links correct without extra setup.
  */
 function inferAppUrl(raw: Record<string, string | undefined>): string | undefined {
+  // Only read on the server (e-mail confirmation and password-reset links), so the
+  // NEXT_PUBLIC_ prefix is optional here too.
   if (raw.NEXT_PUBLIC_APP_URL) return raw.NEXT_PUBLIC_APP_URL;
+  if (raw.APP_URL) return raw.APP_URL;
   const host = raw.VERCEL_PROJECT_PRODUCTION_URL ?? raw.VERCEL_URL;
   return host ? `https://${host}` : undefined;
 }

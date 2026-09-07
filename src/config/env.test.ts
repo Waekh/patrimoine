@@ -135,6 +135,19 @@ describe("evaluateConfiguration", () => {
     if (status.ok) expect(status.env.NEXT_PUBLIC_APP_URL).toBe("https://patrimoinenet.vercel.app");
   });
 
+  it("accepts the public URL without the NEXT_PUBLIC_ prefix", () => {
+    const status = evaluateConfiguration({ ...supabase, APP_URL: "https://patrimoine.example" });
+    expect(status.ok).toBe(true);
+    if (status.ok) expect(status.env.NEXT_PUBLIC_APP_URL).toBe("https://patrimoine.example");
+  });
+
+  it("falls back to localhost when nothing identifies the deployment", () => {
+    // This default is what makes confirmation e-mails point at localhost.
+    const status = evaluateConfiguration(supabase);
+    expect(status.ok).toBe(true);
+    if (status.ok) expect(status.env.NEXT_PUBLIC_APP_URL).toBe("http://localhost:3000");
+  });
+
   it("keeps an explicit public URL over the inferred one", () => {
     const status = evaluateConfiguration({
       ...supabase,

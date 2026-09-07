@@ -62,6 +62,9 @@ export async function GET() {
         ok: true,
         authProvider: status.env.AUTH_PROVIDER,
         appEnv: status.env.APP_ENV,
+        // Base of the confirmation and password-reset links sent by e-mail:
+        // if it shows localhost in production, define APP_URL.
+        appUrl: status.env.NEXT_PUBLIC_APP_URL,
       },
       database,
       rls,

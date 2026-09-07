@@ -39,7 +39,7 @@ Le monde de démonstration est aussi visible sans compte sur `/demo`.
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Requis avec `AUTH_PROVIDER=supabase`.                                                |
 | `SUPABASE_SERVICE_ROLE_KEY`                                 | Optionnel, serveur uniquement. Jamais côté client.                                   |
 | `MARKET_DATA_PROVIDER`                                      | `mock` (seul fournisseur livré : données simulées, jamais présentées comme réelles). |
-| `NEXT_PUBLIC_APP_URL`                                       | URL publique (liens de confirmation / réinitialisation).                             |
+| `APP_URL`                                                   | Base des liens envoyés par e-mail. `NEXT_PUBLIC_APP_URL` reste accepté.              |
 | `APP_ENV`                                                   | `development`, `test`, `preview`, `production`.                                      |
 
 Aucun secret n'est commité ; `.env` est ignoré par Git.
@@ -57,7 +57,7 @@ Aucun secret n'est commité ; `.env` est ignoré par Git.
 1. Créer un projet Supabase et activer l'authentification e-mail / mot de passe.
 2. Renseigner `DATABASE_URL` (pooler), `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `AUTH_PROVIDER=supabase`.
 3. `npm run db:migrate` (ne pas lancer `db:setup`, réservé au PostgreSQL local).
-4. Ajouter `NEXT_PUBLIC_APP_URL/auth/callback` aux _Redirect URLs_ du projet.
+4. Renseigner la _Site URL_ du projet et ajouter `<APP_URL>/auth/callback` aux _Redirect URLs_.
 
 ### PostgreSQL local
 
@@ -115,15 +115,15 @@ indiquent « Service indisponible ») mais aucune donnée n'est accessible.
 
 3. **Déclarer les variables sur Vercel** (Settings → Environment Variables), pour _Production_ et _Preview_ :
 
-   | Variable              | Valeur                                                                   |
-   | --------------------- | ------------------------------------------------------------------------ |
-   | `DATABASE_URL`        | URI du **Transaction pooler** Supabase (port 6543), adapté au serverless |
-   | `AUTH_PROVIDER`       | `supabase`                                                               |
-   | `SUPABASE_URL`        | `https://<ref>.supabase.co`                                              |
-   | `SUPABASE_ANON_KEY`   | clé `anon` ou clé `sb_publishable_…` du projet                           |
-   | `APP_ENV`             | `production`                                                             |
-   | `NEXT_PUBLIC_APP_URL` | facultatif : déduit automatiquement de l'URL Vercel                      |
-   | `DATABASE_POOL_MAX`   | facultatif : 5 par défaut, adapté au serverless                          |
+   | Variable            | Valeur                                                                       |
+   | ------------------- | ---------------------------------------------------------------------------- |
+   | `DATABASE_URL`      | URI du **Transaction pooler** Supabase (port 6543), adapté au serverless     |
+   | `AUTH_PROVIDER`     | `supabase`                                                                   |
+   | `SUPABASE_URL`      | `https://<ref>.supabase.co`                                                  |
+   | `SUPABASE_ANON_KEY` | clé `anon` ou clé `sb_publishable_…` du projet                               |
+   | `APP_ENV`           | `production`                                                                 |
+   | `APP_URL`           | facultatif : déduit de l'URL Vercel, à définir si les liens e-mail sont faux |
+   | `DATABASE_POOL_MAX` | facultatif : 5 par défaut, adapté au serverless                              |
 
    Ces deux variables sont aussi acceptées sous les noms `NEXT_PUBLIC_SUPABASE_URL`,
    `NEXT_PUBLIC_SUPABASE_ANON_KEY` et `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, qui sont ceux
@@ -135,8 +135,13 @@ indiquent « Service indisponible ») mais aucune donnée n'est accessible.
    ne concernent pas ce projet : le client, le rafraîchissement de session et le middleware
    existent déjà (`src/lib/auth/supabase/`, `src/proxy.ts`).
 
-4. **Supabase → Authentication → URL Configuration** : ajouter `https://<domaine>/auth/callback`
-   aux _Redirect URLs_, sinon la confirmation d'e-mail et la réinitialisation de mot de passe échouent.
+4. **Supabase → Authentication → URL Configuration**, deux réglages distincts :
+   - **Site URL** : `https://<domaine>`. Sa valeur par défaut est `http://localhost:3000`, ce qui
+     fait pointer les e-mails de confirmation vers votre machine.
+   - **Redirect URLs** : ajouter `https://<domaine>/auth/callback`. Une adresse de redirection
+     absente de cette liste est ignorée par Supabase, qui retombe alors sur la _Site URL_.
+
+   Les e-mails déjà envoyés conservent l'ancien lien : demandez-en un nouveau après correction.
 
 5. **Redéployer** : les variables d'environnement ne sont lues qu'au déploiement suivant.
 
@@ -150,12 +155,13 @@ indiquent « Service indisponible ») mais aucune donnée n'est accessible.
 
 `/api/health` indique précisément ce qui manque, sans jamais exposer de valeur secrète.
 
-| Réponse                                   | Cause                                            | Correction                                                                             |
-| ----------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| `"status": "unconfigured"` avec `missing` | variables d'environnement absentes               | définir les variables listées, puis **redéployer**                                     |
-| `database.ok: false`                      | base injoignable ou URI incorrecte               | vérifier `DATABASE_URL` : Transaction pooler, mot de passe encodé, caractères spéciaux |
-| `rls.ok: false`                           | le rôle `authenticated` n'a pas accès aux tables | vérifier que le schéma est installé, puis appliquer les droits ci-dessous              |
-| `"status": "ok"`                          | tout fonctionne                                  | —                                                                                      |
+| Réponse                                             | Cause                                            | Correction                                                                             |
+| --------------------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `"status": "unconfigured"` avec `missing`           | variables d'environnement absentes               | définir les variables listées, puis **redéployer**                                     |
+| `database.ok: false`                                | base injoignable ou URI incorrecte               | vérifier `DATABASE_URL` : Transaction pooler, mot de passe encodé, caractères spéciaux |
+| `rls.ok: false`                                     | le rôle `authenticated` n'a pas accès aux tables | vérifier que le schéma est installé, puis appliquer les droits ci-dessous              |
+| `configuration.appUrl` vaut `http://localhost:3000` | l'URL publique n'a pas pu être déduite           | définir `APP_URL`, sinon les liens envoyés par e-mail pointeront vers localhost        |
+| `"status": "ok"`                                    | tout fonctionne                                  | —                                                                                      |
 
 Le contrôle `rls` lit réellement une table sous le rôle `authenticated` : il couvre donc à la fois
 le basculement de rôle et les droits de ce rôle sur les tables. Supabase accorde ces droits
