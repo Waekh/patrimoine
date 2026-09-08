@@ -345,21 +345,58 @@ function generateBuilding(kind: string, style: BuildingStyle, level: number): vo
   );
 }
 
+/**
+ * Filled ellipse by scanline, with a 1 px outline and a shaded lower-right
+ * quarter, so foliage follows the same light direction as the buildings.
+ */
+function drawCanopy(
+  c: PixelCanvas,
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  base: RGBA,
+): void {
+  const rows = (radiusX: number, radiusY: number): number[] => {
+    const widths: number[] = [];
+    for (let dy = -radiusY; dy <= radiusY; dy += 1) {
+      const t = dy / radiusY;
+      widths.push(Math.floor(radiusX * Math.sqrt(Math.max(0, 1 - t * t))));
+    }
+    return widths;
+  };
+  const outline = rows(rx + 1, ry + 1);
+  outline.forEach((halfWidth, index) => {
+    if (halfWidth <= 0) return;
+    c.fillRect(cx - halfWidth, cy - (ry + 1) + index, halfWidth * 2 + 1, 1, OUTLINE);
+  });
+  const fill = rows(rx, ry);
+  fill.forEach((halfWidth, index) => {
+    if (halfWidth <= 0) return;
+    const y = cy - ry + index;
+    c.fillRect(cx - halfWidth, y, halfWidth * 2 + 1, 1, base);
+    // Lower-right quarter in shadow, like the right face of a building.
+    if (y > cy) c.fillRect(cx, y, halfWidth + 1, 1, shade(base, 0.82));
+  });
+}
+
 function generateNature(): void {
-  const tree = (id: string, size: number) => {
+  const tree = (id: string, canopyRadius: number, trunkHeight: number) => {
     const c = new PixelCanvas(32, 48);
     const cx = 16;
     const baseY = 40;
     c.fillPolygon(diamond(cx + 3, baseY + 2, 18, 9), SHADOW);
-    c.fillRect(cx - 2, baseY - 8, 4, 8, hex(PIXEL_PALETTE.wood));
-    const leaf = hex(PIXEL_PALETTE.leaf);
-    const dark = hex(PIXEL_PALETTE.leafDark);
-    for (let i = 0; i < size; i += 1) {
-      const r = size * 5 - i * 4;
-      const cy = baseY - 12 - i * 7;
-      drawDiamond(c, cx, cy, r * 2, r * 1.4, i % 2 === 0 ? leaf : shade(leaf, 1.08), OUTLINE);
-      c.fillRect(cx + 2, cy + 1, Math.max(2, r - 2), 1, dark);
-    }
+    const wood = hex(PIXEL_PALETTE.wood);
+    c.fillRect(cx - 2, baseY - trunkHeight, 4, trunkHeight, wood);
+    c.fillRect(cx + 1, baseY - trunkHeight, 1, trunkHeight, shade(wood, 0.82));
+    drawCanopy(
+      c,
+      cx,
+      baseY - trunkHeight - canopyRadius + 2,
+      canopyRadius + 2,
+      canopyRadius,
+      hex(PIXEL_PALETTE.leaf),
+    );
     save(
       {
         id,
@@ -373,15 +410,15 @@ function generateNature(): void {
       c,
     );
   };
-  tree("tree_basic", 3);
-  tree("tree_small", 2);
+  tree("tree_basic", 10, 9);
+  tree("tree_small", 7, 7);
 
   const park = new PixelCanvas(TILE_W, TILE_H + 16);
   drawDiamond(park, 32, 32, TILE_W, TILE_H, hex(PIXEL_PALETTE.grassDark), OUTLINE);
   park.fillRect(30, 26, 4, 1, hex(PIXEL_PALETTE.roadLine));
   park.fillRect(26, 34, 12, 1, hex(PIXEL_PALETTE.roadLine));
-  drawDiamond(park, 22, 22, 12, 8, hex(PIXEL_PALETTE.leaf), OUTLINE);
-  drawDiamond(park, 44, 26, 12, 8, hex(PIXEL_PALETTE.leaf), OUTLINE);
+  drawCanopy(park, 22, 22, 7, 5, hex(PIXEL_PALETTE.leaf));
+  drawCanopy(park, 44, 26, 6, 4, hex(PIXEL_PALETTE.leaf));
   save(
     {
       id: "park_lv1",

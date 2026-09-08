@@ -22,7 +22,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "assets:generate": "tsx scripts/generate-placeholder-assets.ts",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build",
-    "db:sql": "tsx scripts/generate-supabase-setup.ts"
+    "db:sql": "tsx scripts/generate-supabase-setup.ts",
+    "assets:catalogue": "tsx scripts/generate-asset-catalogue.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",
