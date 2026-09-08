@@ -144,13 +144,29 @@ indiquent « Service indisponible ») mais aucune donnée n'est accessible.
 
    Les e-mails déjà envoyés conservent l'ancien lien : demandez-en un nouveau après correction.
 
-   Le message de confirmation d'inscription est fourni dans
-   `supabase/emails/confirm-signup.html`, à coller dans Authentication → Emails → _Confirm signup_,
-   avec pour objet « Confirmez votre adresse e-mail ».
+5. **Supabase → Authentication → SMTP Settings** : configurer un SMTP externe. C'est
+   **obligatoire** pour que l'inscription fonctionne, et pas une optimisation :
 
-5. **Redéployer** : les variables d'environnement ne sont lues qu'au déploiement suivant.
+   - Sans SMTP personnalisé, Supabase **refuse de livrer un e-mail à une adresse qui n'appartient
+     pas à l'équipe du projet**. Une inscription depuis n'importe quelle autre adresse est
+     enregistrée, l'application affiche « Vérifiez votre boîte e-mail », et aucun message n'est
+     jamais envoyé — sans erreur visible.
+   - Le service intégré est prévu pour la démonstration et impose une limite très basse.
+   - Tant qu'aucun SMTP n'est configuré, le tableau de bord interdit aussi de modifier les
+     modèles d'e-mail : ils restent ceux de Supabase, en anglais.
 
-6. **Vérifier** `https://<domaine>/api/health` :
+   N'importe quel fournisseur convient (Resend, Postmark, Brevo, Mailgun, SES…). Renseigner
+   l'hôte, le port, l'utilisateur, le mot de passe, ainsi que l'adresse et le nom d'expéditeur,
+   sur un domaine vérifié chez le fournisseur.
+
+   Une fois le SMTP actif, coller `supabase/emails/confirm-signup.html` dans
+   Authentication → Emails → _Confirm signup_, avec pour objet
+   « Confirmez votre adresse e-mail ». Vérifier au passage
+   Authentication → Rate Limits, dont la valeur par défaut est de 30 messages par heure.
+
+6. **Redéployer** : les variables d'environnement ne sont lues qu'au déploiement suivant.
+
+7. **Vérifier** `https://<domaine>/api/health` :
 
    ```json
    { "status": "ok", "database": { "ok": true }, "rls": { "ok": true } }
