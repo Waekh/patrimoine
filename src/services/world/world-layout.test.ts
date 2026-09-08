@@ -84,6 +84,24 @@ describe("WorldLayoutEngine", () => {
     }
   });
 
+  it("gives the public garden a 2x2 square that nothing else overlaps", () => {
+    const r = layoutWorld(entities, { mapSize: 32, seed: 11, cityLevel: 4 });
+    const park = r.decorations.find((d) => d.kind === "PARK");
+    expect(park).toBeDefined();
+    expect(park!.footprint).toEqual({ w: 2, h: 2 });
+    // validateLayout already claims every covered tile, so reaching here means
+    // no building, tree or road shares any of the four cells.
+    const covered = new Set<string>();
+    for (let dy = 0; dy < 2; dy += 1)
+      for (let dx = 0; dx < 2; dx += 1)
+        covered.add(`${park!.position.x + dx}:${park!.position.y + dy}`);
+    expect(covered.size).toBe(4);
+    for (const other of r.decorations) {
+      if (other.id === park!.id) continue;
+      expect(covered.has(`${other.position.x}:${other.position.y}`)).toBe(false);
+    }
+  });
+
   it("reports entities that cannot fit instead of overlapping", () => {
     const many: WorldEntity[] = Array.from({ length: 60 }, (_, i) => ({
       ...entities[1]!,

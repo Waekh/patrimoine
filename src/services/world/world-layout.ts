@@ -1,7 +1,9 @@
 import { DISTRICT_IDS, type DistrictId } from "@/config/districts";
+import { PARK_FOOTPRINT } from "@/config/sprites";
 import { SPRITE_IDS } from "@/config/sprites";
 import type {
   DistrictArea,
+  Footprint,
   GridPosition,
   WorldBuilding,
   WorldCharacter,
@@ -244,6 +246,7 @@ function placeDecorations(
       kind: "POND",
       position: pond,
       spriteId: SPRITE_IDS.pond,
+      footprint: { w: 1, h: 1 },
     });
     occupancy.occupy(pond.x, pond.y, 1, 1);
     const shoal = 1 + Math.floor(random() * 2);
@@ -269,25 +272,62 @@ function placeDecorations(
       const threshold = border ? 0.55 : density;
       if (r < threshold) {
         const spriteId = random() < 0.3 ? SPRITE_IDS.treeSmall : SPRITE_IDS.treeBasic;
-        decorations.push({ id: `tree_${x}_${y}`, kind: "TREE", position: { x, y }, spriteId });
+        decorations.push({
+          id: `tree_${x}_${y}`,
+          kind: "TREE",
+          position: { x, y },
+          spriteId,
+          footprint: { w: 1, h: 1 },
+        });
         occupancy.occupy(x, y, 1, 1);
       }
     }
   }
-  // A park in the centre of the home district when the map is otherwise empty.
+  // A public garden in the middle of the home district. It covers 2x2 tiles, so
+  // it is placed on the first free square rather than on one fixed cell.
   const home = rects.HOME_DISTRICT;
-  const px = home.x + Math.floor(home.w / 2);
-  const py = home.y + Math.floor(home.h / 2);
-  if (occupancy.isFree(px, py)) {
+  const park = PARK_FOOTPRINT;
+  const spot = firstFreeSquare(
+    home.x + Math.floor(home.w / 2),
+    home.y + Math.floor(home.h / 2),
+    park,
+    occupancy,
+  );
+  if (spot) {
     decorations.push({
-      id: `park_${px}_${py}`,
+      id: `park_${spot.x}_${spot.y}`,
       kind: "PARK",
-      position: { x: px, y: py },
+      position: spot,
       spriteId: SPRITE_IDS.park,
+      footprint: park,
     });
-    occupancy.occupy(px, py, 1, 1);
+    occupancy.occupy(spot.x, spot.y, park.w, park.h);
   }
   return { decorations, fish };
+}
+
+/**
+ * Searches outwards from a preferred cell for a square big enough to hold a
+ * multi-tile decoration, so the park still lands near the middle of its
+ * district when the exact centre is taken.
+ */
+function firstFreeSquare(
+  preferredX: number,
+  preferredY: number,
+  footprint: Footprint,
+  occupancy: Occupancy,
+): GridPosition | null {
+  for (let radius = 0; radius <= 6; radius += 1) {
+    for (let dy = -radius; dy <= radius; dy += 1) {
+      for (let dx = -radius; dx <= radius; dx += 1) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+        const x = preferredX + dx;
+        const y = preferredY + dy;
+        if (occupancy.areaFree(x, y, footprint.w, footprint.h)) return { x, y };
+      }
+    }
+  }
+  return null;
 }
 
 /**
@@ -423,7 +463,10 @@ export function validateLayout(
       for (let dx = 0; dx < b.footprint.w; dx += 1)
         claim(b.position.x + dx, b.position.y + dy, b.id);
   }
-  for (const d of decorations) claim(d.position.x, d.position.y, d.id);
+  for (const d of decorations)
+    for (let dy = 0; dy < d.footprint.h; dy += 1)
+      for (let dx = 0; dx < d.footprint.w; dx += 1)
+        claim(d.position.x + dx, d.position.y + dy, d.id);
 }
 
 /** Deterministic isometric draw order: back-to-front by (x + y), then x. */
@@ -434,5 +477,3 @@ export function zIndexOf(position: GridPosition, footprint: Footprint = { w: 1, 
     (position.x + footprint.w - 1)
   );
 }
-
-type Footprint = { w: number; h: number };

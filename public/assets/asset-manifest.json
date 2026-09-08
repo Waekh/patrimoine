@@ -842,15 +842,15 @@
       "id": "park_lv1",
       "type": "decoration",
       "file": "world/decorations/park_lv1.png",
-      "width": 64,
-      "height": 66,
+      "width": 128,
+      "height": 106,
       "anchor": {
-        "x": 32,
-        "y": 49
+        "x": 64,
+        "y": 73
       },
       "footprint": {
-        "w": 1,
-        "h": 1
+        "w": 2,
+        "h": 2
       },
       "placeholder": true
     },
@@ -959,22 +959,6 @@
       "footprint": {
         "w": 2,
         "h": 2
-      },
-      "placeholder": true
-    },
-    {
-      "id": "scaffold",
-      "type": "effect",
-      "file": "world/effects/scaffold.png",
-      "width": 64,
-      "height": 64,
-      "anchor": {
-        "x": 32,
-        "y": 48
-      },
-      "footprint": {
-        "w": 1,
-        "h": 1
       },
       "placeholder": true
     }

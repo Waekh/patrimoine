@@ -133,7 +133,7 @@ export const SHOWCASE_ASSETS: AssetWithDetails[] = ASSETS.map((item, index) => {
   };
 });
 
-/** Linked to the first two properties, so a couple of buildings carry scaffolding. */
+/** Linked to the first two properties, so a couple of buildings carry a debt. */
 export const SHOWCASE_LIABILITIES: Liability[] = [
   ["Crédit résidence principale", 240_000, identifier(0)],
   ["Crédit immeuble, Lille", 380_000, identifier(1)],

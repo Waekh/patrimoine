@@ -914,50 +914,86 @@ function generateNature(): void {
 }
 
 /**
- * The park used to be a flat green diamond with two blobs on it, unreadable at
- * world scale. It now reads as a square: gravel path crossing it, hedge border,
- * benches, a lamp post, flower beds and two shade trees.
+ * Public garden covering a 2x2 square. A single tile was far too small: the
+ * park read as a green blob among the buildings, so it now gets the room for
+ * gravel walks, a bandstand, a lily pond, benches, beds and shade trees.
  */
 function generatePark(): void {
-  const H = TILE_H + 34;
-  const c = new PixelCanvas(TILE_W, H);
-  const cy = H - TILE_H / 2 - 1;
+  const W = TILE_W * 2;
+  const D = TILE_H * 2;
+  const H = D + 42;
+  const c = new PixelCanvas(W, H);
+  const cx = W / 2;
+  const cy = H - D / 2 - 1;
   const lawn = hex(PIXEL_PALETTE.grass);
   const gravel = hex(PIXEL_PALETTE.concrete);
   const hedge = hex(PIXEL_PALETTE.leafDark);
   const random = createSeededRandom(seedFromString("park_lv1"));
 
-  drawDiamond(c, 32, cy, TILE_W, TILE_H, lawn, OUTLINE);
-  // Mown stripes: the same 2:1 slope as everything else.
-  const plot: IsoBox = { cx: 32, baseY: cy, w: TILE_W, h: TILE_H, height: 0 };
+  drawDiamond(c, cx, cy, W, D, lawn, OUTLINE);
+  // Mown stripes follow the 2:1 slope, like every other ground texture.
+  const plot: IsoBox = { cx, baseY: cy, w: W, h: D, height: 0 };
   for (let u = 1; u < faceSteps(plot); u += 2)
-    fillFaceRect(c, plot, "left", u, 0, 1, 1, shade(lawn, 0.92));
-  // Gravel cross through the middle of the square. A path along a grid axis
-  // moves 2 px across for 1 px down, so it reaches the tile edge at |i| = 8:
-  // going further would spill the path outside the diamond.
-  const reach = TILE_H / 2 - 9;
+    fillFaceRect(c, plot, "left", u, 0, 1, 1, shade(lawn, 0.93));
+
+  // Gravel cross. A walk along a grid axis moves 2 px across for 1 px down, and
+  // a point is inside the diamond while |dx| / 2 + |dy| <= D / 2. With dx = 2i
+  // and dy = i that gives |i| <= D / 4, so the walk stops there; going further
+  // spills gravel onto the grass outside the tile.
+  const reach = D / 4 - 3;
   for (let i = -reach; i <= reach; i += 1) {
     for (const dx of [i * 2, -i * 2]) {
-      c.fillRect(32 + dx - 2, cy + i, 4, 1, gravel);
-      c.fillRect(32 + dx - 2, cy + i, 1, 1, shade(gravel, 0.86));
+      c.fillRect(cx + dx - 3, cy + i, 6, 1, gravel);
+      c.fillRect(cx + dx - 3, cy + i, 1, 1, shade(gravel, 0.86));
     }
   }
   // Clipped hedge along the two rear edges.
-  for (let i = 0; i < TILE_W / 2 - 2; i += 2) {
-    c.fillRect(32 - i, cy - TILE_H / 2 + i / 2 + 1, 2, 3, hedge);
-    c.fillRect(30 + i, cy - TILE_H / 2 + i / 2 + 1, 2, 3, shade(hedge, 0.85));
+  for (let i = 0; i < W / 2 - 3; i += 2) {
+    c.fillRect(cx - i, cy - D / 2 + i / 2 + 1, 2, 3, hedge);
+    c.fillRect(cx - 2 + i, cy - D / 2 + i / 2 + 1, 2, 3, shade(hedge, 0.85));
   }
-  // Flower beds: three tones so they read as colour, not noise.
+
+  // Ornamental pond in the near quarter, with a lily pad on it.
+  const water = hex(PIXEL_PALETTE.water);
+  fillDiamond(c, cx - 22, cy + 12, 30, 15, hex(PIXEL_PALETTE.wood));
+  fillDiamond(c, cx - 22, cy + 12, 26, 13, water);
+  outlineDiamond(c, cx - 22, cy + 12, 26, 13, shade(hex(PIXEL_PALETTE.waterDark), 0.9));
+  const surface: IsoBox = { cx: cx - 22, baseY: cy + 12, w: 26, h: 13, height: 0 };
+  for (let u = 1; u < faceSteps(surface); u += 2)
+    fillFaceRect(c, surface, "left", u, 0, 2, 1, shade(water, 1.2));
+  fillDiamond(c, cx - 24, cy + 12, 7, 4, hex(PIXEL_PALETTE.leaf));
+
+  // Bandstand at the crossing of the walks: octagonal deck on posts, tiled roof.
+  const deckY = cy - 4;
+  fillDiamond(c, cx, deckY, 34, 17, hex(PIXEL_PALETTE.stone));
+  outlineDiamond(c, cx, deckY, 34, 17, OUTLINE);
+  fillDiamond(c, cx, deckY - 2, 30, 15, shade(hex(PIXEL_PALETTE.stone), 1.1));
+  for (const dx of [-13, 0, 13]) c.fillRect(cx + dx, deckY - 16, 2, 14, hex(PIXEL_PALETTE.wood));
+  const roofY = deckY - 16;
+  const roof = drawHipRoof(c, cx, roofY, 38, 19, 9, hex(PIXEL_PALETTE.roof), OUTLINE);
+  c.replaceInRect(
+    cx,
+    roofY - 14,
+    W / 2,
+    30,
+    hex(PIXEL_PALETTE.roof),
+    shade(hex(PIXEL_PALETTE.roof), 0.78),
+  );
+  c.fillRect(cx, roof.topY - 5, 1, 5, hex(PIXEL_PALETTE.goldDark));
+  c.fillRect(cx - 1, roof.topY - 7, 3, 2, hex(PIXEL_PALETTE.gold));
+
+  // Flower beds, three tones so they read as colour rather than noise.
   for (const [bx, by] of [
-    [20, cy + 4],
-    [46, cy + 2],
+    [cx + 28, cy + 2],
+    [cx - 28, cy - 6],
+    [cx + 4, cy + 24],
   ] as const) {
-    fillDiamond(c, bx, by, 12, 6, hex(PIXEL_PALETTE.wood));
-    fillDiamond(c, bx, by, 9, 4, hex(PIXEL_PALETTE.leaf));
-    for (let k = 0; k < 6; k += 1) {
+    fillDiamond(c, bx, by, 16, 8, hex(PIXEL_PALETTE.wood));
+    fillDiamond(c, bx, by, 13, 6, hex(PIXEL_PALETTE.leaf));
+    for (let k = 0; k < 9; k += 1) {
       const petal = [PIXEL_PALETTE.gold, PIXEL_PALETTE.roof, PIXEL_PALETTE.roadLine][k % 3]!;
       c.fillRect(
-        bx - 3 + Math.floor(random() * 7),
+        bx - 4 + Math.floor(random() * 9),
         by - 1 + Math.floor(random() * 3),
         1,
         1,
@@ -965,36 +1001,51 @@ function generatePark(): void {
       );
     }
   }
-  // Two benches facing the path.
+
+  // Benches facing the walks.
   for (const [bx, by, flip] of [
-    [21, cy - 4, 1],
-    [40, cy + 7, -1],
+    [cx - 34, cy + 2, 1],
+    [cx + 16, cy + 18, -1],
+    [cx + 30, cy - 10, -1],
   ] as const) {
     const seat = hex(PIXEL_PALETTE.wood);
-    for (let i = 0; i < 3; i += 1) {
+    for (let i = 0; i < 4; i += 1) {
       c.fillRect(bx + i * 2 * flip, by + i * flip, 2, 1, seat);
       c.fillRect(bx + i * 2 * flip, by - 3 + i * flip, 2, 2, shade(seat, 1.15));
     }
     c.fillRect(bx, by + 1, 1, 2, OUTLINE);
-    c.fillRect(bx + 4 * flip, by + 1 + 2 * flip, 1, 2, OUTLINE);
+    c.fillRect(bx + 6 * flip, by + 1 + 3 * flip, 1, 2, OUTLINE);
   }
-  // Lamp post at the crossing of the paths.
-  c.fillRect(32, cy - 13, 1, 13, hex(PIXEL_PALETTE.metalDark));
-  c.fillRect(30, cy - 16, 4, 3, hex(PIXEL_PALETTE.metalDark));
-  c.fillRect(31, cy - 15, 2, 2, hex(PIXEL_PALETTE.windowLit));
-  drawCanopy(c, 15, cy - 12, 8, 6, hex(PIXEL_PALETTE.leaf));
-  c.fillRect(15, cy - 8, 2, 8, hex(PIXEL_PALETTE.wood));
-  drawCanopy(c, 50, cy - 8, 7, 5, hex(PIXEL_PALETTE.leaf));
-  c.fillRect(50, cy - 5, 2, 6, hex(PIXEL_PALETTE.wood));
+
+  // Lamp posts and shade trees around the edge.
+  for (const [lx, ly] of [
+    [cx - 12, cy + 22],
+    [cx + 26, cy - 8],
+  ] as const) {
+    c.fillRect(lx, ly - 14, 1, 14, hex(PIXEL_PALETTE.metalDark));
+    c.fillRect(lx - 2, ly - 17, 4, 3, hex(PIXEL_PALETTE.metalDark));
+    c.fillRect(lx - 1, ly - 16, 2, 2, hex(PIXEL_PALETTE.windowLit));
+  }
+  // Trunks stay inside the diamond and clear of the bandstand in the middle.
+  for (const [tx, ty, radius] of [
+    [cx - 46, cy - 4, 11],
+    [cx + 46, cy + 2, 10],
+    [cx - 40, cy + 6, 8],
+    [cx + 32, cy - 14, 9],
+  ] as const) {
+    c.fillRect(tx, ty - 8, 2, 8, hex(PIXEL_PALETTE.wood));
+    drawCanopy(c, tx, ty - 8 - radius + 2, radius + 2, radius, hex(PIXEL_PALETTE.leaf));
+  }
+
   save(
     {
       id: "park_lv1",
       type: "decoration",
       file: "world/decorations/park_lv1.png",
-      width: TILE_W,
+      width: W,
       height: H,
-      anchor: { x: 32, y: cy },
-      footprint: { w: 1, h: 1 },
+      anchor: { x: cx, y: cy },
+      footprint: { w: 2, h: 2 },
     },
     c,
   );
@@ -1191,23 +1242,6 @@ function generateEffects(): void {
       c,
     );
   }
-  // Scaffolding overlay for buildings carrying a linked debt: thin wooden frame.
-  const s = new PixelCanvas(TILE_W, 64);
-  const wood = hex(PIXEL_PALETTE.wood);
-  for (const x of [4, 20, 44, 60]) s.fillRect(x, 8, 1, 48, wood);
-  for (const y of [14, 30, 46]) s.fillRect(4, y, 57, 1, wood);
-  save(
-    {
-      id: "scaffold",
-      type: "effect",
-      file: "world/effects/scaffold.png",
-      width: TILE_W,
-      height: 64,
-      anchor: { x: 32, y: 48 },
-      footprint: { w: 1, h: 1 },
-    },
-    s,
-  );
 }
 
 function main(): void {
@@ -1260,7 +1294,6 @@ function main(): void {
       "tree_small",
       "park_lv1",
       "character_basic",
-      "scaffold",
       "selection_ring",
     ]);
   }

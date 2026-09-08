@@ -29,6 +29,9 @@ export function buildingFootprint(type: BuildingType, level: BuildingLevel): Foo
   return level >= 4 ? { w: 2, h: 2 } : { w: 1, h: 1 };
 }
 
+/** The public garden covers a 2x2 square: a single tile read as a green blob. */
+export const PARK_FOOTPRINT: Footprint = { w: 2, h: 2 };
+
 export const SPRITE_IDS = {
   terrainGrass: "terrain_grass",
   terrainWater: "terrain_water",
@@ -41,7 +44,6 @@ export const SPRITE_IDS = {
   pond: "pond_lv1",
   fish: "fish_basic",
   characterBasic: "character_basic",
-  scaffold: "scaffold",
   selection: "selection_ring",
   signBoard: "sign_board",
   font: "font_5x7",

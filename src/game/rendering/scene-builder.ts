@@ -29,7 +29,6 @@ export interface BuildingNode {
   building: WorldBuilding;
   container: Container;
   sprite: Sprite;
-  scaffold: Sprite | null;
 }
 
 export interface CharacterNode {
@@ -214,16 +213,6 @@ function buildBuilding(
   container.zIndex = zIndexOf(building.position, building.footprint);
   container.addChild(sprite);
 
-  let scaffold: Sprite | null = null;
-  if (building.linkedLiabilityIds.length > 0) {
-    scaffold = spriteFor(registry, SPRITE_IDS.scaffold);
-    if (scaffold) {
-      scaffold.alpha = 0.85;
-      scaffold.position.set(0, 4);
-      container.addChild(scaffold);
-    }
-  }
-
   // Hit area: the base diamond extended up to the sprite top, in local (anchor)
   // space. With an anchor at the base of the sprite, the top edge sits at
   // -height * anchor.y; using the distance to the *bottom* edge instead left
@@ -240,7 +229,7 @@ function buildBuilding(
   });
   sprite.on("pointerover", () => callbacks.onBuildingHover(building.id));
   sprite.on("pointerout", () => callbacks.onBuildingHover(null));
-  return { building, container, sprite, scaffold };
+  return { building, container, sprite };
 }
 
 function buildDecoration(
@@ -250,9 +239,11 @@ function buildDecoration(
 ): Sprite | null {
   const sprite = spriteFor(registry, decoration.spriteId);
   if (!sprite) return null;
-  const { x, y } = gridToScreen(decoration.position, grid);
+  // A decoration may cover several tiles (the public garden is 2x2), so it is
+  // anchored on the centre of its footprint like a building.
+  const { x, y } = footprintCenter(decoration.position, decoration.footprint, grid);
   sprite.position.set(x, y);
-  sprite.zIndex = zIndexOf(decoration.position);
+  sprite.zIndex = zIndexOf(decoration.position, decoration.footprint);
   return sprite;
 }
 

@@ -2,14 +2,17 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Logo } from "@/components/layout/logo";
 import { LogoutButton } from "@/features/auth/logout-button";
-import { requireUser } from "@/lib/auth";
+import { requireProvisionedUser } from "@/services/auth/user-provisioning";
 import { isOnboardingCompleted } from "@/services/onboarding/onboarding-status";
 
 // Every page below reads the session cookie: always rendered per request.
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingLayout({ children }: LayoutProps<"/onboarding">) {
-  const user = await requireUser();
+  // Provisioned, not merely authenticated: the questionnaire writes straight
+  // away, and a session without its application row would fail on the foreign
+  // key with nothing but a generic error to show for it.
+  const user = await requireProvisionedUser();
   if (await isOnboardingCompleted(user.id)) redirect("/world");
   return (
     <div className="bg-bg flex min-h-screen flex-col">

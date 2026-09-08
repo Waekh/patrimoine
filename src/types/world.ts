@@ -39,7 +39,7 @@ export interface WorldBuilding {
   label: string;
   valueCents: number;
   currency: CurrencyCode;
-  /** Ids of liabilities linked to the asset (rendered as scaffolding). */
+  /** Ids of liabilities linked to the asset; surfaced in the detail panel. */
   linkedLiabilityIds: string[];
   /** Linked debt / value, in basis points, when available. */
   debtRatioBps: number | null;
@@ -52,6 +52,8 @@ export interface WorldDecoration {
   kind: "TREE" | "PARK" | "POND";
   position: GridPosition;
   spriteId: string;
+  /** Tiles covered, anchored at `position`. Trees and ponds take a single one. */
+  footprint: Footprint;
 }
 
 /** A fish swimming inside a pond; purely decorative, never interactive. */
