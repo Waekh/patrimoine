@@ -7,6 +7,9 @@ test.describe("Public pages", () => {
       page.getByRole("heading", { name: "Votre patrimoine devient un monde." }),
     ).toBeVisible();
     await expect(page.getByRole("link", { name: "Créer mon monde" })).toBeVisible();
+    // Le paysage vitrine doit se rendre, et les chiffres affichés être annoncés comme fictifs.
+    await expect(page.locator("canvas")).toHaveCount(1);
+    await expect(page.getByText("Démonstration : données fictives.")).toBeVisible();
     const body = await page.textContent("body");
     expect(body).not.toMatch(/[\u{1F300}-\u{1FAFF}]/u);
   });

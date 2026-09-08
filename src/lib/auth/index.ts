@@ -46,10 +46,24 @@ export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
   try {
     return await service.getCurrentUser();
   } catch (error) {
+    // Next signals redirects, not-found and dynamic rendering by throwing an
+    // error carrying a `digest`. Swallowing those would break the framework:
+    // only a genuine provider failure degrades to an anonymous visitor.
+    if (isFrameworkSignal(error)) throw error;
     logger.error("auth.currentUser.failed", error);
     return null;
   }
 });
+
+/** Control-flow errors thrown by Next.js, recognised by their `digest`. */
+export function isFrameworkSignal(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    typeof (error as { digest?: unknown }).digest === "string"
+  );
+}
 
 /** For protected layouts and actions: redirects to /login when anonymous. */
 export async function requireUser(): Promise<AuthUser> {

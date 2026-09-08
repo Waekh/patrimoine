@@ -26,6 +26,13 @@ interface Rect {
   y: number;
   w: number;
   h: number;
+  /**
+   * Corner the district fills from. Every district starts against the central
+   * crossroads, so the city grows outwards from the middle of the map instead
+   * of hugging its edges.
+   */
+  anchorX: "start" | "end";
+  anchorY: "start" | "end";
 }
 
 /** Occupancy grid used for collision detection. */
@@ -59,15 +66,31 @@ export function computeDistrictRects(mapSize: number): Record<DistrictId, Rect> 
   const east = road + 2;
   const seSplit = Math.floor(q / 2);
   return {
-    HOME_DISTRICT: { x: 1, y: 1, w: q, h: q },
-    FINANCE_DISTRICT: { x: east, y: 1, w: mapSize - east - 1, h: q },
-    CASH_DISTRICT: { x: 1, y: east, w: q, h: mapSize - east - 1 },
-    REAL_ESTATE_DISTRICT: { x: east, y: east, w: mapSize - east - 1, h: seSplit },
+    HOME_DISTRICT: { x: 1, y: 1, w: q, h: q, anchorX: "end", anchorY: "end" },
+    FINANCE_DISTRICT: {
+      x: east,
+      y: 1,
+      w: mapSize - east - 1,
+      h: q,
+      anchorX: "start",
+      anchorY: "end",
+    },
+    CASH_DISTRICT: { x: 1, y: east, w: q, h: mapSize - east - 1, anchorX: "end", anchorY: "start" },
+    REAL_ESTATE_DISTRICT: {
+      x: east,
+      y: east,
+      w: mapSize - east - 1,
+      h: seSplit,
+      anchorX: "start",
+      anchorY: "start",
+    },
     ALTERNATIVE_DISTRICT: {
       x: east,
       y: east + seSplit + 1,
       w: mapSize - east - 1,
       h: mapSize - east - seSplit - 2,
+      anchorX: "start",
+      anchorY: "start",
     },
   };
 }
@@ -105,6 +128,21 @@ function buildTerrain(mapSize: number, occupancy: Occupancy): WorldTerrainTile[]
  * Buildings are placed by priority (value desc) on a spaced sub-grid inside
  * their district, row by row, so the result is stable when values change.
  */
+/**
+ * Slots along one axis, on a stride-2 grid so a free tile separates buildings.
+ * `anchor` decides which end of the district is filled first.
+ */
+function axisPositions(
+  start: number,
+  length: number,
+  size: number,
+  anchor: "start" | "end",
+): number[] {
+  const positions: number[] = [];
+  for (let value = start; value + size <= start + length; value += 2) positions.push(value);
+  return anchor === "start" ? positions : positions.reverse();
+}
+
 function placeEntities(
   entities: readonly WorldEntity[],
   rects: Record<DistrictId, Rect>,
@@ -126,14 +164,16 @@ function placeEntities(
     const rect = rects[entity.district];
     const { w, h } = entity.footprint;
     let placed: GridPosition | null = null;
-    // Stride of 2 keeps one free tile between buildings for readability.
-    for (let y = rect.y; y + h <= rect.y + rect.h && !placed; y += 2) {
-      for (let x = rect.x; x + w <= rect.x + rect.w; x += 2) {
+    const xs = axisPositions(rect.x, rect.w, w, rect.anchorX);
+    const ys = axisPositions(rect.y, rect.h, h, rect.anchorY);
+    for (const y of ys) {
+      for (const x of xs) {
         if (occupancy.areaFree(x, y, w, h)) {
           placed = { x, y };
           break;
         }
       }
+      if (placed) break;
     }
     if (!placed) {
       unplaced.push(entity);

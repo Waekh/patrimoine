@@ -24,6 +24,20 @@ test.describe("Authentication", () => {
     await expect(page.getByText("Adresse e-mail ou mot de passe incorrect.")).toBeVisible();
   });
 
+  test("the home page reflects the session", async ({ page }) => {
+    // Scoped to the header: "Créer mon monde" in the hero also contains "mon monde".
+    const nav = page.locator("header nav");
+    await page.goto("/");
+    await expect(nav.getByRole("link", { name: "Se connecter" })).toBeVisible();
+
+    await register(page, uniqueEmail());
+    await page.goto("/");
+    // Regression guard: a statically prerendered home page served the anonymous
+    // header to signed-in visitors.
+    await expect(nav.getByRole("link", { name: "Mon monde", exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Se connecter" })).toHaveCount(0);
+  });
+
   test("onboarding progress survives leaving and coming back", async ({ page }) => {
     const email = uniqueEmail();
     await register(page, email);

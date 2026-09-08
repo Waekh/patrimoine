@@ -16,6 +16,13 @@ export interface WorldCanvasProps {
   focusInsetBottom?: number;
   /** Exposes camera controls to the HUD once the engine is ready. */
   onReady: (controls: WorldControls | null) => void;
+  /**
+   * Purely illustrative use (home page): the scene takes no pointer event and
+   * shows no loading or error message, since the page reads fine without it.
+   */
+  decorative?: boolean;
+  /** Default true: zoom out until the map fits. False keeps a 1:1 slice. */
+  fitToViewport?: boolean;
 }
 
 export interface WorldControls {
@@ -45,6 +52,8 @@ export function WorldCanvas({
   animateOnMount,
   focusInsetBottom = 0,
   onReady,
+  decorative = false,
+  fitToViewport = true,
 }: WorldCanvasProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<WorldApp | null>(null);
@@ -78,6 +87,7 @@ export function WorldCanvas({
           manifest,
           backgroundColor: bg,
           reducedMotion: prefersReducedMotion,
+          fitToViewport,
         });
         app.events.on("select", ({ buildingId }) => onSelectRef.current(buildingId));
         app.events.on("ready", () => {
@@ -118,9 +128,9 @@ export function WorldCanvas({
   }, [selectedBuildingId, focusInsetBottom]);
 
   return (
-    <div className="bg-world-bg relative h-full w-full">
+    <div className={`bg-world-bg relative h-full w-full${decorative ? "pointer-events-none" : ""}`}>
       <div ref={hostRef} className="h-full w-full" />
-      {status === "loading" ? (
+      {status === "loading" && !decorative ? (
         <div
           role="status"
           className="absolute inset-0 flex items-center justify-center text-sm text-white/70"
@@ -128,7 +138,7 @@ export function WorldCanvas({
           {t("world.loading")}
         </div>
       ) : null}
-      {status === "error" ? (
+      {status === "error" && !decorative ? (
         <div
           role="alert"
           className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-white/80"

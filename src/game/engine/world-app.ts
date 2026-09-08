@@ -18,6 +18,11 @@ export interface WorldAppOptions {
   manifest: ClientAssetManifest;
   backgroundColor: number;
   reducedMotion: () => boolean;
+  /**
+   * Zooms out until the whole map fits. Disabled for a decorative scene, where
+   * a 1:1 slice keeps the pixels crisp instead of dropping one row in two.
+   */
+  fitToViewport?: boolean;
 }
 
 /**
@@ -140,7 +145,7 @@ export class WorldApp {
     const mapChanged = !this.previous || this.previous.mapSize !== state.mapSize;
     this.previous = state;
     if (mapChanged) {
-      this.camera.fitToMap(state.mapSize);
+      if (this.options.fitToViewport !== false) this.camera.fitToMap(state.mapSize);
       this.camera.center(state.camera.center, false);
     }
     if (this.selectedId && !this.scene.buildings.has(this.selectedId)) this.selectedId = null;
