@@ -2,6 +2,19 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { PIXEL_PALETTE } from "../src/config/pixel-palette";
 import { PixelCanvas, hex, shade, type RGBA } from "./lib/png";
+import {
+  type IsoBox,
+  drawGroundShadow,
+  drawHipRoof,
+  drawIsoBox,
+  faceBand,
+  faceSteps,
+  fillDiamond,
+  fillFaceEllipse,
+  fillFaceRect,
+  outlineDiamond,
+} from "./lib/iso";
+import { createSeededRandom, seedFromString } from "../src/services/world/seeded-random";
 
 /**
  * Generates PLACEHOLDER pixel-art sprites that respect the Pixel Art Bible
@@ -97,72 +110,6 @@ function drawDiamond(
   }
 }
 
-/**
- * Isometric box standing on a diamond base of size (w, h) whose centre is at
- * (cx, baseY). Left face = base colour, right face = -18 %, top = +12 %.
- */
-function drawBox(
-  c: PixelCanvas,
-  cx: number,
-  baseY: number,
-  w: number,
-  h: number,
-  height: number,
-  base: RGBA,
-  topColor?: RGBA,
-): void {
-  const left: [number, number] = [cx - w / 2, baseY];
-  const right: [number, number] = [cx + w / 2, baseY];
-  const bottom: [number, number] = [cx, baseY + h / 2];
-  const up = (p: [number, number]): [number, number] => [p[0], p[1] - height];
-  c.fillPolygon([left, bottom, up(bottom), up(left)], base);
-  c.fillPolygon([bottom, right, up(right), up(bottom)], shade(base, 0.82));
-  drawDiamond(c, cx, baseY - height, w, h, topColor ?? shade(base, 1.12), null);
-  // Outlines: vertical edges and top diamond.
-  c.line(left[0], left[1], left[0], left[1] - height, OUTLINE);
-  c.line(right[0], right[1], right[0], right[1] - height, OUTLINE);
-  c.line(bottom[0], bottom[1], bottom[0], bottom[1] - height, OUTLINE);
-  c.line(left[0], left[1], bottom[0], bottom[1], OUTLINE);
-  c.line(bottom[0], bottom[1], right[0], right[1], OUTLINE);
-  const top = diamond(cx, baseY - height, w, h);
-  for (let i = 0; i < 4; i += 1) {
-    const a = top[i]!;
-    const b = top[(i + 1) % 4]!;
-    c.line(a[0], a[1], b[0], b[1], OUTLINE);
-  }
-}
-
-/** Windows on the left (x < cx) or right face, following the face slope (h/w per px). */
-function drawWindows(
-  c: PixelCanvas,
-  cx: number,
-  baseY: number,
-  w: number,
-  h: number,
-  height: number,
-  rows: number,
-  cols: number,
-  color: RGBA,
-): void {
-  const slope = h / w; // vertical drop per horizontal pixel along a face edge
-  const faceW = w / 2;
-  for (const side of [-1, 1] as const) {
-    for (let r = 0; r < rows; r += 1) {
-      for (let col = 0; col < cols; col += 1) {
-        const offset = 6 + ((col + 0.5) * (faceW - 12)) / cols;
-        const x = side === -1 ? cx - faceW + offset : cx + offset;
-        const yBase = side === -1 ? baseY + offset * slope : baseY + (faceW - offset) * slope;
-        const y = Math.round(yBase - height + 6 + r * ((height - 10) / rows));
-        c.fillRect(Math.round(x), y, 3, 4, color);
-      }
-    }
-  }
-}
-
-function drawShadow(c: PixelCanvas, cx: number, baseY: number, w: number, h: number): void {
-  c.fillPolygon(diamond(cx + 4, baseY + 3, w, h), SHADOW);
-}
-
 function terrainTile(
   fill: string,
   id: string,
@@ -186,154 +133,603 @@ function terrainTile(
   );
 }
 
+/** Speckle inside the tile diamond: |dx|/2 + |dy| < h/2 keeps it on the tile. */
+function tileSpeckle(
+  c: PixelCanvas,
+  color: RGBA,
+  random: () => number,
+  count: number,
+  runLength = 2,
+): void {
+  for (let k = 0; k < count; k += 1) {
+    const dy = Math.round((random() - 0.5) * (TILE_H - 6));
+    const span = Math.max(0, TILE_W / 2 - 6 - Math.abs(dy) * 2);
+    const dx = Math.round((random() - 0.5) * span * 2);
+    c.fillRect(32 + dx, 16 + dy, runLength, 1, color);
+  }
+}
+
+/**
+ * Kerb along the two upper edges of the diamond, inset by one step so it reads
+ * as a raised edge rather than an outline. Left edge runs (32,0) -> (0,16),
+ * right edge (32,0) -> (64,16).
+ */
+function tileKerb(c: PixelCanvas, color: RGBA): void {
+  for (let i = 2; i < TILE_W / 2 - 2; i += 2) {
+    c.fillRect(32 - i, i / 2 + 1, 2, 1, color);
+    c.fillRect(30 + i, i / 2 + 1, 2, 1, color);
+  }
+}
+
 function generateTerrain(): void {
   terrainTile(PIXEL_PALETTE.grass, "terrain_grass", "world/terrain/terrain_grass.png", (c) => {
+    const random = createSeededRandom(seedFromString("terrain_grass"));
     const dark = hex(PIXEL_PALETTE.grassDark);
-    for (const [x, y] of [
-      [20, 14],
-      [40, 10],
-      [30, 22],
-      [46, 18],
-      [14, 18],
-    ] as const)
-      c.fillRect(x, y, 2, 1, dark);
+    const light = shade(hex(PIXEL_PALETTE.grass), 1.14);
+    // Two tones of clumping, then a few bright blades: standard 16-bit ground.
+    tileSpeckle(c, shade(dark, 1.06), random, 26, 3);
+    tileSpeckle(c, dark, random, 14, 2);
+    tileSpeckle(c, light, random, 10, 1);
   });
   terrainTile(PIXEL_PALETTE.water, "terrain_water", "world/terrain/terrain_water.png", (c) => {
-    const dark = hex(PIXEL_PALETTE.waterDark);
-    c.fillRect(22, 12, 6, 1, dark);
-    c.fillRect(36, 18, 6, 1, dark);
-    c.fillRect(28, 22, 4, 1, dark);
+    const random = createSeededRandom(seedFromString("terrain_water"));
+    const deep = hex(PIXEL_PALETTE.waterDark);
+    const foam = shade(hex(PIXEL_PALETTE.water), 1.3);
+    // Wave crests follow the 2:1 slope so the surface reads as isometric.
+    for (const [x, y, len] of [
+      [20, 12, 8],
+      [34, 17, 10],
+      [26, 22, 6],
+      [40, 9, 6],
+    ] as const) {
+      for (let i = 0; i < len; i += 2) c.fillRect(x + i, y + i / 2, 2, 1, deep);
+      for (let i = 0; i < len - 2; i += 2) c.fillRect(x + i + 2, y + i / 2 - 1, 2, 1, foam);
+    }
+    tileSpeckle(c, shade(deep, 1.1), random, 12, 2);
   });
   const line = hex(PIXEL_PALETTE.roadLine);
+  const kerb = shade(hex(PIXEL_PALETTE.road), 1.16);
+  const grit = shade(hex(PIXEL_PALETTE.road), 0.9);
+  const asphalt = (c: PixelCanvas, id: string): void => {
+    tileSpeckle(c, grit, createSeededRandom(seedFromString(id)), 30, 2);
+    tileKerb(c, kerb);
+  };
   terrainTile(PIXEL_PALETTE.road, "road_ns", "world/roads/road_ns.png", (c) => {
-    for (let i = 0; i < 4; i += 1) c.fillRect(24 + i * 6, 12 + i * 3, 3, 1, line);
+    asphalt(c, "road_ns");
+    for (let i = 0; i < 5; i += 1) c.fillRect(20 + i * 6, 10 + i * 3, 3, 1, line);
   });
   terrainTile(PIXEL_PALETTE.road, "road_ew", "world/roads/road_ew.png", (c) => {
-    for (let i = 0; i < 4; i += 1) c.fillRect(24 + i * 6, 20 - i * 3, 3, 1, line);
+    asphalt(c, "road_ew");
+    for (let i = 0; i < 5; i += 1) c.fillRect(20 + i * 6, 22 - i * 3, 3, 1, line);
   });
   terrainTile(PIXEL_PALETTE.road, "road_cross", "world/roads/road_cross.png", (c) => {
-    c.fillRect(31, 15, 2, 2, line);
+    asphalt(c, "road_cross");
+    // Painted box junction at the centre of the crossroads.
+    for (let i = 0; i < 3; i += 1) {
+      c.fillRect(26 + i * 4, 10 + i * 2, 2, 1, line);
+      c.fillRect(34 + i * 4, 18 + i * 2, 2, 1, line);
+      c.fillRect(26 + i * 4, 22 - i * 2, 2, 1, line);
+      c.fillRect(34 + i * 4, 14 - i * 2, 2, 1, line);
+    }
   });
 }
 
+type Material = "brick" | "stone" | "glass" | "metal" | "plaster";
+type RoofKind = "flat" | "hip" | "lowpitch";
+type EntranceKind = "door" | "portal" | "shutter" | "vaultDoor" | "shopfront";
+
 interface BuildingStyle {
-  base: string;
-  top?: string;
-  windows?: string;
-  roof?: boolean;
-  columns?: boolean;
-  trim?: string;
+  wall: string;
+  plinth: string;
+  trim: string;
+  glass?: string;
+  material: Material;
+  roof: RoofKind;
+  entrance: EntranceKind;
+  category: string;
+  /** Vertical extrusion per level, in pixels. */
   heights: [number, number, number, number, number];
+  /** Pixels between two floors: drives bands and window rows. */
+  floor?: number;
+  balconies?: boolean;
+  columns?: boolean;
+  arched?: boolean;
+  rivets?: boolean;
 }
 
 const STYLES: Record<string, BuildingStyle> = {
   house: {
-    base: PIXEL_PALETTE.wall,
-    windows: PIXEL_PALETTE.glassDark,
-    roof: true,
-    heights: [18, 22, 26, 30, 36],
+    wall: PIXEL_PALETTE.wall,
+    plinth: PIXEL_PALETTE.stoneDark,
+    trim: PIXEL_PALETTE.wallDark,
+    glass: PIXEL_PALETTE.windowDark,
+    material: "plaster",
+    roof: "hip",
+    entrance: "door",
+    category: "real_estate",
+    heights: [20, 24, 28, 32, 38],
+    floor: 11,
   },
   apartment: {
-    base: PIXEL_PALETTE.brick,
-    windows: PIXEL_PALETTE.glass,
-    heights: [32, 44, 56, 64, 84],
-  },
-  bank: {
-    base: PIXEL_PALETTE.stone,
-    columns: true,
-    trim: PIXEL_PALETTE.gold,
-    heights: [24, 30, 36, 44, 56],
-  },
-  vault: { base: PIXEL_PALETTE.stoneDark, trim: PIXEL_PALETTE.gold, heights: [18, 22, 26, 32, 40] },
-  financial: {
-    base: PIXEL_PALETTE.glass,
-    windows: PIXEL_PALETTE.roadLine,
-    heights: [40, 56, 72, 88, 112],
-  },
-  market: {
-    base: PIXEL_PALETTE.glassDark,
-    windows: PIXEL_PALETTE.roadLine,
-    trim: PIXEL_PALETTE.gold,
-    heights: [28, 36, 48, 60, 76],
+    wall: PIXEL_PALETTE.brick,
+    plinth: PIXEL_PALETTE.stoneDark,
+    trim: PIXEL_PALETTE.concrete,
+    glass: PIXEL_PALETTE.windowDark,
+    material: "brick",
+    roof: "flat",
+    entrance: "door",
+    category: "real_estate",
+    heights: [34, 46, 58, 66, 86],
+    floor: 10,
+    balconies: true,
   },
   realestate: {
-    base: PIXEL_PALETTE.brickDark,
-    windows: PIXEL_PALETTE.glass,
-    heights: [30, 40, 52, 64, 80],
+    wall: PIXEL_PALETTE.brickDark,
+    plinth: PIXEL_PALETTE.stoneDark,
+    trim: PIXEL_PALETTE.concrete,
+    glass: PIXEL_PALETTE.windowDark,
+    material: "brick",
+    roof: "flat",
+    entrance: "shopfront",
+    category: "real_estate",
+    heights: [32, 42, 54, 66, 82],
+    floor: 10,
   },
-  warehouse: { base: PIXEL_PALETTE.wood, heights: [16, 20, 24, 30, 36] },
+  bank: {
+    wall: PIXEL_PALETTE.stone,
+    plinth: PIXEL_PALETTE.stoneDark,
+    trim: PIXEL_PALETTE.gold,
+    glass: PIXEL_PALETTE.windowDark,
+    material: "stone",
+    roof: "flat",
+    entrance: "portal",
+    category: "cash",
+    heights: [26, 32, 38, 46, 58],
+    floor: 12,
+    columns: true,
+  },
+  vault: {
+    wall: PIXEL_PALETTE.metal,
+    plinth: PIXEL_PALETTE.metalDark,
+    trim: PIXEL_PALETTE.gold,
+    material: "metal",
+    roof: "flat",
+    entrance: "vaultDoor",
+    category: "cash",
+    heights: [20, 24, 28, 34, 42],
+    floor: 14,
+    rivets: true,
+  },
+  financial: {
+    wall: PIXEL_PALETTE.glass,
+    plinth: PIXEL_PALETTE.concreteDark,
+    trim: PIXEL_PALETTE.concrete,
+    glass: PIXEL_PALETTE.glassPane,
+    material: "glass",
+    roof: "flat",
+    entrance: "shopfront",
+    category: "financial",
+    heights: [42, 58, 74, 90, 114],
+    floor: 8,
+  },
+  market: {
+    wall: PIXEL_PALETTE.glassDark,
+    plinth: PIXEL_PALETTE.stoneDark,
+    trim: PIXEL_PALETTE.gold,
+    glass: PIXEL_PALETTE.windowDark,
+    material: "stone",
+    roof: "flat",
+    entrance: "portal",
+    category: "financial",
+    heights: [30, 38, 50, 62, 78],
+    floor: 11,
+    arched: true,
+  },
+  warehouse: {
+    wall: PIXEL_PALETTE.wood,
+    plinth: PIXEL_PALETTE.stoneDark,
+    trim: PIXEL_PALETTE.metal,
+    material: "metal",
+    roof: "lowpitch",
+    entrance: "shutter",
+    category: "alternative",
+    heights: [18, 22, 26, 32, 40],
+    floor: 20,
+  },
 };
 
-const CATEGORY_OF: Record<string, string> = {
-  house: "real_estate",
-  apartment: "real_estate",
-  bank: "cash",
-  vault: "cash",
-  financial: "financial",
-  market: "financial",
-  realestate: "real_estate",
-  warehouse: "alternative",
-};
+/** Material texture on both faces: mortar joints, stone courses, ribs, mullions. */
+function drawMaterial(c: PixelCanvas, box: IsoBox, style: BuildingStyle): void {
+  const wall = hex(style.wall);
+  for (const face of ["left", "right"] as const) {
+    const tone = face === "left" ? wall : shade(wall, 0.82);
+    const steps = faceSteps(box);
+    switch (style.material) {
+      case "brick": {
+        const mortar = shade(tone, 0.88);
+        for (let v = 6; v < box.height - 2; v += 3)
+          faceBand(c, box, face, v, 1, mortar, { dither: true });
+        break;
+      }
+      case "stone": {
+        const seam = shade(tone, 0.9);
+        for (let v = 7; v < box.height - 2; v += 6) faceBand(c, box, face, v, 1, seam);
+        fillFaceRect(c, box, face, 0, 5, steps, box.height - 7, seam, { every: 4 });
+        break;
+      }
+      case "metal": {
+        fillFaceRect(c, box, face, 0, 1, steps, box.height - 2, shade(tone, 0.87), { every: 2 });
+        break;
+      }
+      case "glass": {
+        fillFaceRect(c, box, face, 0, 1, steps, box.height - 2, shade(tone, 0.76), { every: 3 });
+        break;
+      }
+      case "plaster": {
+        fillFaceRect(c, box, face, 0, 2, steps, Math.min(7, box.height - 4), shade(tone, 0.94), {
+          dither: true,
+        });
+        break;
+      }
+    }
+  }
+}
+
+/** Base course: a darker skirt with a light lip, which sets the building on the ground. */
+function drawPlinth(c: PixelCanvas, box: IsoBox, style: BuildingStyle): void {
+  const plinth = hex(style.plinth);
+  for (const face of ["left", "right"] as const) {
+    const tone = face === "left" ? plinth : shade(plinth, 0.82);
+    faceBand(c, box, face, 1, 4, tone);
+    faceBand(c, box, face, 5, 1, shade(tone, 1.2));
+  }
+}
+
+function drawFloorBands(c: PixelCanvas, box: IsoBox, style: BuildingStyle): void {
+  const spacing = style.floor ?? 10;
+  const trim = hex(style.trim);
+  for (const face of ["left", "right"] as const) {
+    const tone = shade(face === "left" ? trim : shade(trim, 0.82), 0.9);
+    for (let v = 6 + spacing; v < box.height - 4; v += spacing) faceBand(c, box, face, v, 1, tone);
+  }
+}
+
+function drawWindows(
+  c: PixelCanvas,
+  box: IsoBox,
+  style: BuildingStyle,
+  random: () => number,
+): void {
+  const spacing = style.floor ?? 10;
+  const steps = faceSteps(box);
+  const glass = hex(style.glass ?? PIXEL_PALETTE.windowDark);
+  const lit = hex(PIXEL_PALETTE.windowLit);
+  const sill = hex(style.trim);
+  const tall = style.material === "glass" ? 5 : 4;
+  for (const face of ["left", "right"] as const) {
+    const dim = face === "left" ? 1 : 0.86;
+    for (let v = 8; v + tall + 2 < box.height; v += spacing) {
+      for (let u = 1; u + 2 <= steps - 1; u += 3) {
+        const isLit = random() < (style.material === "glass" ? 0.16 : 0.26);
+        const body = isLit ? shade(lit, dim) : shade(glass, dim);
+        fillFaceRect(c, box, face, u, v, 2, tall, body);
+        // Sill, then a single bright pixel run: the glass reflection.
+        fillFaceRect(c, box, face, u, v - 1, 2, 1, shade(sill, dim));
+        fillFaceRect(c, box, face, u, v + tall - 1, 1, 1, shade(body, 1.3));
+        if (style.arched) fillFaceRect(c, box, face, u, v + tall, 1, 1, body);
+        if (style.balconies && v > 10) {
+          const slab = shade(hex(PIXEL_PALETTE.concrete), dim);
+          fillFaceRect(c, box, face, u - 1, v - 3, 4, 1, slab);
+          fillFaceRect(c, box, face, u - 1, v - 2, 4, 1, shade(slab, 0.8), { every: 2 });
+        }
+      }
+    }
+  }
+}
+
+function drawColumns(c: PixelCanvas, box: IsoBox, style: BuildingStyle): void {
+  const steps = faceSteps(box);
+  const column = shade(hex(style.wall), 1.12);
+  const shadow = shade(hex(style.wall), 0.8);
+  for (const face of ["left", "right"] as const) {
+    for (let u = 1; u < steps - 1; u += 3) {
+      fillFaceRect(
+        c,
+        box,
+        face,
+        u,
+        6,
+        1,
+        box.height - 12,
+        face === "left" ? column : shade(column, 0.85),
+      );
+      fillFaceRect(c, box, face, u + 1, 6, 1, box.height - 12, shadow);
+    }
+  }
+}
+
+/** Riveted armour plating: corner buttresses plus rivet lines top and bottom. */
+function drawRivets(c: PixelCanvas, box: IsoBox): void {
+  const rivet = shade(hex(PIXEL_PALETTE.metal), 1.3);
+  const dark = hex(PIXEL_PALETTE.metalDark);
+  const steps = faceSteps(box);
+  for (const face of ["left", "right"] as const) {
+    const dim = face === "left" ? 1 : 0.84;
+    // Buttress at each end of the face, the vault's heavy corner armour.
+    for (const u of [0, steps - 2]) {
+      fillFaceRect(c, box, face, u, 1, 2, box.height - 2, shade(dark, dim));
+      fillFaceRect(c, box, face, u, 1, 1, box.height - 2, shade(rivet, dim * 0.9));
+      for (let v = 4; v < box.height - 3; v += 5)
+        fillFaceRect(c, box, face, u + 1, v, 1, 1, shade(rivet, dim));
+    }
+    for (let u = 3; u < steps - 2; u += 3) {
+      fillFaceRect(c, box, face, u, 2, 1, 1, shade(rivet, dim));
+      fillFaceRect(c, box, face, u, box.height - 4, 1, 1, shade(rivet, dim));
+    }
+    // Welded seam at mid height.
+    faceBand(c, box, face, Math.floor(box.height / 2) - 6, 1, shade(dark, dim));
+  }
+}
+
+function drawEntrance(c: PixelCanvas, box: IsoBox, style: BuildingStyle): void {
+  const steps = faceSteps(box);
+  const centre = Math.floor(steps / 2);
+  const trim = hex(style.trim);
+  switch (style.entrance) {
+    case "door": {
+      const wood = hex(PIXEL_PALETTE.wood);
+      fillFaceRect(c, box, "left", centre - 1, 2, 3, 8, shade(wood, 0.9));
+      fillFaceRect(c, box, "left", centre - 1, 9, 3, 1, trim);
+      fillFaceRect(c, box, "left", centre, 6, 1, 1, hex(PIXEL_PALETTE.gold));
+      fillFaceRect(c, box, "left", centre - 2, 1, 5, 1, hex(PIXEL_PALETTE.concrete));
+      break;
+    }
+    case "portal": {
+      const stone = shade(hex(style.wall), 1.1);
+      fillFaceRect(c, box, "left", centre - 2, 2, 5, 12, shade(stone, 0.7));
+      fillFaceRect(c, box, "left", centre - 2, 13, 5, 1, trim);
+      fillFaceRect(c, box, "left", centre - 3, 14, 7, 1, trim);
+      // Pediment above the portal.
+      for (let k = 0; k < 3; k += 1) {
+        fillFaceRect(c, box, "left", centre - 2 + k, 15 + k, 5 - k * 2, 1, stone);
+      }
+      break;
+    }
+    case "shutter": {
+      const metal = hex(PIXEL_PALETTE.metal);
+      const concrete = hex(PIXEL_PALETTE.concrete);
+      // One loading bay per 12 steps of facade, so the bays never run together.
+      const bays = Math.max(1, Math.floor(steps / 12));
+      const pitch = Math.floor(steps / (bays + 1));
+      for (let bay = 1; bay <= bays; bay += 1) {
+        const u = bay * pitch - 3;
+        fillFaceRect(c, box, "left", u, 1, 7, 11, shade(metal, 0.72));
+        fillFaceRect(c, box, "left", u, 1, 7, 11, shade(metal, 0.9), { dither: true });
+        // Slat lines follow the face slope, then the lintel above the bay.
+        for (let v = 2; v < 11; v += 3)
+          fillFaceRect(c, box, "left", u, v, 7, 1, shade(metal, 0.62));
+        fillFaceRect(c, box, "left", u, 12, 7, 1, trim);
+        fillFaceRect(c, box, "left", u - 1, 12, 9, 1, shade(concrete, 0.9));
+        // Concrete dock apron in front of the bay.
+        fillFaceRect(c, box, "left", u - 1, 0, 9, 1, concrete);
+        fillFaceRect(c, box, "left", u + 2, 5, 2, 1, shade(metal, 1.3));
+      }
+      // Painted band with a service door on the right-hand face.
+      faceBand(c, box, "right", 12, 2, shade(trim, 0.8));
+      fillFaceRect(c, box, "right", 2, 1, 2, 8, shade(concrete, 0.7));
+      fillFaceRect(c, box, "right", 2, 9, 2, 1, shade(trim, 0.8));
+      break;
+    }
+    case "vaultDoor": {
+      const ring = hex(PIXEL_PALETTE.metalDark);
+      const disc = shade(hex(PIXEL_PALETTE.metal), 1.1);
+      const gold = hex(PIXEL_PALETTE.gold);
+      const ru = Math.max(4, Math.min(7, Math.floor(steps / 3)));
+      const rv = Math.max(6, Math.min(11, Math.floor(box.height / 3)));
+      const centreV = Math.min(Math.max(rv + 3, Math.floor(box.height / 2)), box.height - rv - 5);
+      // Recessed jamb, gold rim, brushed door, then the spokes of the wheel.
+      fillFaceEllipse(c, box, "left", centre, centreV, ru + 2, rv + 2, shade(ring, 0.8));
+      fillFaceEllipse(c, box, "left", centre, centreV, ru + 1, rv + 1, shade(gold, 0.85));
+      fillFaceEllipse(c, box, "left", centre, centreV, ru, rv, disc);
+      fillFaceEllipse(c, box, "left", centre, centreV, ru - 1, rv - 1, shade(disc, 0.9), {
+        dither: true,
+      });
+      for (let k = -rv + 2; k <= rv - 2; k += 1)
+        fillFaceRect(c, box, "left", centre, centreV + k, 1, 1, shade(disc, 0.78));
+      fillFaceRect(c, box, "left", centre - ru + 1, centreV, ru * 2 - 1, 1, shade(disc, 0.78));
+      fillFaceEllipse(c, box, "left", centre, centreV, 2, 3, ring);
+      fillFaceRect(c, box, "left", centre, centreV, 1, 1, gold);
+      // Threshold slab in front of the door.
+      fillFaceRect(c, box, "left", centre - ru - 2, 1, ru * 2 + 5, 1, hex(PIXEL_PALETTE.concrete));
+      break;
+    }
+    case "shopfront": {
+      const pane = hex(style.glass ?? PIXEL_PALETTE.glassPane);
+      const awning = hex(PIXEL_PALETTE.awning);
+      for (const face of ["left", "right"] as const) {
+        fillFaceRect(c, box, face, 1, 2, steps - 2, 7, shade(pane, face === "left" ? 0.9 : 0.76));
+        fillFaceRect(c, box, face, 1, 2, steps - 2, 7, shade(pane, face === "left" ? 1.05 : 0.9), {
+          every: 3,
+        });
+        fillFaceRect(c, box, face, 1, 9, steps - 2, 2, shade(awning, face === "left" ? 1 : 0.82));
+        fillFaceRect(c, box, face, 1, 9, steps - 2, 2, shade(awning, 1.35), { every: 2 });
+      }
+      break;
+    }
+  }
+}
+
+/** Vents, water tank and antenna: the silhouette detail that sells a flat roof. */
+function drawRoofFurniture(
+  c: PixelCanvas,
+  box: IsoBox,
+  level: number,
+  roofY: number,
+  random: () => number,
+): void {
+  const metal = hex(PIXEL_PALETTE.metal);
+  const scale = box.w / 64;
+  const vent: IsoBox = {
+    cx: box.cx - Math.round(10 * scale),
+    baseY: roofY + Math.round(4 * scale),
+    w: 14,
+    h: 7,
+    height: 5,
+  };
+  drawIsoBox(c, vent, { base: shade(metal, 0.95), outline: OUTLINE });
+  if (level >= 3) {
+    const tank: IsoBox = {
+      cx: box.cx + Math.round(10 * scale),
+      baseY: roofY - Math.round(1 * scale),
+      w: 16,
+      h: 8,
+      height: 9,
+    };
+    drawIsoBox(c, tank, { base: hex(PIXEL_PALETTE.metalDark), outline: OUTLINE });
+    fillFaceRect(c, tank, "left", 0, 3, faceSteps(tank), 1, shade(metal, 1.15));
+  }
+  if (level >= 4) {
+    const x = box.cx + (random() < 0.5 ? -4 : 6);
+    const top = roofY - 16;
+    c.line(x, roofY, x, top, hex(PIXEL_PALETTE.metalDark));
+    c.fillRect(x - 3, top + 4, 7, 1, hex(PIXEL_PALETTE.metalDark));
+    c.fillRect(x - 1, top - 1, 2, 2, hex(PIXEL_PALETTE.gold));
+  }
+}
 
 function generateBuilding(kind: string, style: BuildingStyle, level: number): void {
-  const footprint = kind === "house" || level < 4 ? 1 : 2;
+  const id = `${kind}_lv${level}`;
+  const random = createSeededRandom(seedFromString(id));
+  const footprint = kind === "house" ? 1 : level < 4 ? 1 : 2;
   const w = TILE_W * footprint;
   const h = TILE_H * footprint;
   const height = style.heights[level - 1]!;
-  const roofExtra = style.roof ? 10 : 0;
-  const canvasH = h + height + roofExtra + 8;
+  const roofExtra =
+    style.roof === "hip" ? w / 2 + 12 : style.roof === "lowpitch" ? Math.round(w / 8) + 14 : 20;
+  const canvasH = Math.round(h + height + roofExtra + 8);
   const c = new PixelCanvas(w + 8, canvasH);
   const cx = w / 2 + 4;
-  const baseY = canvasH - h / 2 - 4;
-  drawShadow(c, cx, baseY, w, h);
-  const base = hex(style.base);
-  drawBox(c, cx, baseY, w, h, height, base);
-  if (style.windows)
-    drawWindows(
-      c,
-      cx,
-      baseY,
-      w,
-      h,
-      height,
-      Math.max(1, Math.floor(height / 14)),
-      footprint === 2 ? 3 : 2,
-      hex(style.windows),
+  const baseY = canvasH - h / 2 - 5;
+  const box: IsoBox = { cx, baseY, w, h, height };
+
+  drawGroundShadow(c, box, SHADOW);
+  drawIsoBox(c, box, { base: hex(style.wall), outline: OUTLINE });
+  drawMaterial(c, box, style);
+  drawPlinth(c, box, style);
+  if (style.columns) drawColumns(c, box, style);
+  drawFloorBands(c, box, style);
+  if (style.glass || style.material === "glass") drawWindows(c, box, style, random);
+  if (style.rivets) drawRivets(c, box);
+  drawEntrance(c, box, style);
+
+  const roofY = baseY - height;
+  if (style.roof === "flat") {
+    // Parapet ring, then a recessed deck tinted by the building's material.
+    const deck = hex(
+      style.material === "metal"
+        ? PIXEL_PALETTE.metalDark
+        : style.material === "glass"
+          ? PIXEL_PALETTE.concreteDark
+          : PIXEL_PALETTE.concrete,
     );
-  if (style.columns) {
-    const col = shade(base, 1.08);
-    for (let i = 1; i < 4; i += 1) {
-      const x = Math.round(cx - w / 2 + (i * w) / 8);
-      c.fillRect(x, Math.round(baseY - height + 4 + (i * h) / 8), 2, height - 6, col);
+    fillDiamond(c, cx, roofY + 1, w - 8, h - 4, deck);
+    // Gravel and a walkway ring, so a large deck is not a flat colour field.
+    const gravel: IsoBox = { cx, baseY: roofY + 1, w: w - 8, h: h - 4, height: 0 };
+    for (let u = 1; u < faceSteps(gravel); u += 2)
+      fillFaceRect(c, gravel, "left", u, 0, 1, 1, shade(deck, 1.12));
+    fillDiamond(c, cx, roofY + 1, w - 20, h - 10, shade(deck, 0.92));
+    outlineDiamond(c, cx, roofY + 1, w - 20, h - 10, shade(deck, 1.1));
+    outlineDiamond(c, cx, roofY + 1, w - 8, h - 4, shade(deck, 0.72));
+    faceBand(c, box, "left", height - 3, 3, shade(hex(style.trim), 1.05));
+    faceBand(c, box, "right", height - 3, 3, shade(hex(style.trim), 0.86));
+    drawRoofFurniture(c, box, level, roofY, random);
+  } else if (style.roof === "hip") {
+    const tile = hex(PIXEL_PALETTE.roof);
+    const rise = Math.round(w / 4);
+    const roof = drawHipRoof(c, cx, roofY, w + 6, h + 3, rise, tile, OUTLINE);
+    // Right-hand slope in shadow, same light direction as the walls.
+    c.replaceInRect(cx, roofY - rise - 4, w / 2 + 8, rise + h + 10, tile, shade(tile, 0.78));
+    // The chimney emerges from the shaded slope, halfway up the pitch.
+    const chimney: IsoBox = {
+      cx: cx + Math.round(w / 5),
+      baseY: roofY - Math.round(rise / 2),
+      w: 10,
+      h: 5,
+      height: 14,
+    };
+    drawIsoBox(c, chimney, { base: hex(PIXEL_PALETTE.brickDark), outline: OUTLINE });
+    faceBand(c, chimney, "left", 12, 2, hex(PIXEL_PALETTE.stoneDark));
+    faceBand(c, chimney, "right", 12, 2, shade(hex(PIXEL_PALETTE.stoneDark), 0.82));
+    fillDiamond(c, chimney.cx, chimney.baseY - chimney.height, 6, 3, hex(PIXEL_PALETTE.outline));
+    // Dormer on the lit slope, a level-3+ luxury.
+    if (level >= 3) {
+      const dormer: IsoBox = {
+        cx: cx - Math.round(w / 5),
+        baseY: roofY - Math.round(rise / 4),
+        w: 12,
+        h: 6,
+        height: 7,
+      };
+      drawIsoBox(c, dormer, { base: hex(style.wall), outline: OUTLINE });
+      fillFaceRect(c, dormer, "left", 1, 2, 1, 4, hex(PIXEL_PALETTE.windowLit));
+      fillDiamond(c, dormer.cx, dormer.baseY - dormer.height, 12, 6, tile);
+      outlineDiamond(c, dormer.cx, dormer.baseY - dormer.height, 12, 6, OUTLINE);
+    }
+    void roof;
+  } else {
+    const metal = hex(PIXEL_PALETTE.metal);
+    const rise = Math.round(w / 8);
+    const roof = drawHipRoof(c, cx, roofY, w + 4, h + 2, rise, metal, OUTLINE);
+    c.replaceInRect(cx, roofY - rise - 4, w / 2 + 6, rise + h + 10, metal, shade(metal, 0.82));
+    // The ridge plate faces upwards, so it keeps the lit tone on both halves.
+    fillDiamond(c, cx, roof.topY, roof.topW, roof.topH, shade(metal, 1.06));
+    outlineDiamond(c, cx, roof.topY, roof.topW, roof.topH, OUTLINE);
+    // Skylights along the ridge, plus a ridge vent and an extractor at scale.
+    const pane = hex(PIXEL_PALETTE.glassPane);
+    const count = footprint === 2 ? 3 : 2;
+    for (let k = 0; k < count; k += 1) {
+      const dx = (k - (count - 1) / 2) * 16;
+      fillDiamond(c, cx + dx, roof.topY, 10, 5, dx >= 0 ? shade(pane, 0.85) : pane);
+      outlineDiamond(c, cx + dx, roof.topY, 10, 5, hex(PIXEL_PALETTE.metalDark));
+    }
+    const extractor: IsoBox = {
+      cx: cx - Math.round(w / 4),
+      baseY: roof.topY + 4,
+      w: 12,
+      h: 6,
+      height: 6,
+    };
+    drawIsoBox(c, extractor, { base: hex(PIXEL_PALETTE.metalDark), outline: OUTLINE });
+    fillDiamond(
+      c,
+      extractor.cx,
+      extractor.baseY - extractor.height,
+      8,
+      4,
+      hex(PIXEL_PALETTE.metal),
+    );
+    if (level >= 4) {
+      // Ridge ventilators: a second silhouette detail once the shed gets big.
+      for (const dx of [-6, 10] as const) {
+        const cowl: IsoBox = {
+          cx: cx + dx * 2,
+          baseY: roof.topY + 2,
+          w: 10,
+          h: 5,
+          height: 9,
+        };
+        drawIsoBox(c, cowl, { base: hex(PIXEL_PALETTE.metal), outline: OUTLINE });
+        fillDiamond(c, cowl.cx, cowl.baseY - cowl.height, 12, 6, hex(PIXEL_PALETTE.metalDark));
+        outlineDiamond(c, cowl.cx, cowl.baseY - cowl.height, 12, 6, OUTLINE);
+      }
     }
   }
-  if (style.trim) {
-    const trim = hex(style.trim);
-    const top = diamond(cx, baseY - height, w, h);
-    c.line(top[3]![0], top[3]![1] + 1, top[2]![0], top[2]![1] + 1, trim);
-    c.line(top[2]![0], top[2]![1] + 1, top[1]![0], top[1]![1] + 1, trim);
-    if (kind === "vault") c.fillRect(cx - 6, Math.round(baseY - height / 2), 4, 4, trim);
-  }
-  if (style.roof) {
-    // Pitched roof: a smaller darker box on top, red palette, with a ridge.
-    const roof = hex(PIXEL_PALETTE.roof);
-    drawBox(c, cx, baseY - height, w - 8, h - 4, roofExtra, roof, shade(roof, 1.12));
-    c.line(
-      cx - 2,
-      baseY - height - roofExtra - 1,
-      cx + 2,
-      baseY - height - roofExtra - 1,
-      hex(PIXEL_PALETTE.roofDark),
-    );
-    // Door on the left face.
-    c.fillRect(cx - 12, baseY - 8 + 6, 4, 7, hex(PIXEL_PALETTE.wood));
-  }
-  const id = `${kind}_lv${level}`;
+
   save(
     {
       id,
       type: "building",
-      category: CATEGORY_OF[kind],
+      category: style.category,
       level,
       file: `world/buildings/${id}.png`,
       width: c.width,
@@ -525,6 +921,12 @@ function main(): void {
   console.log(`${entries.length} placeholder sprites generated.`);
   const sheet = process.env.CONTACT_SHEET;
   if (sheet) {
+    const only = process.env.CONTACT_SHEET_IDS;
+    const scale = Number(process.env.CONTACT_SHEET_SCALE ?? 2);
+    if (only) {
+      writeContactSheet(sheet, only.split(","), scale);
+      return;
+    }
     writeContactSheet(sheet, [
       "terrain_grass",
       "terrain_water",

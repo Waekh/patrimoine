@@ -41,46 +41,86 @@ Le point d'ancrage d'un sprite est le **centre du losange de base**
 
 ## 5. Palette (`src/config/pixel-palette.ts`)
 
-| Nom          | Hex       | Usage             |
-| ------------ | --------- | ----------------- |
-| `outline`    | `#2b2a33` | contours          |
-| `grass`      | `#7fb069` | terrain           |
-| `grass-dark` | `#5f8d4e` | ombre terrain     |
-| `water`      | `#4f8fc0` | eau               |
-| `water-dark` | `#3a6f9c` | eau profonde      |
-| `road`       | `#9d9a92` | routes            |
-| `road-line`  | `#e8e4d8` | marquage          |
-| `wall`       | `#e7d8bf` | murs maisons      |
-| `wall-dark`  | `#c8b593` | murs côté ombre   |
-| `roof`       | `#b8433a` | toits maisons     |
-| `roof-dark`  | `#8e332c` | toits ombre       |
-| `stone`      | `#b9bcc4` | banques           |
-| `stone-dark` | `#8f939c` | banques ombre     |
-| `glass`      | `#7fc3d8` | vitrage financier |
-| `glass-dark` | `#4e93a8` | vitrage ombre     |
-| `brick`      | `#c9775a` | immeubles         |
-| `brick-dark` | `#9a5540` | immeubles ombre   |
-| `wood`       | `#8a6a45` | entrepôts, troncs |
-| `leaf`       | `#4f9a4a` | feuillage         |
-| `leaf-dark`  | `#356d33` | feuillage ombre   |
-| `gold`       | `#e0b84a` | accents (coffre)  |
-| `skin`       | `#f1c9a5` | personnages       |
+| Nom            | Hex       | Usage                         |
+| -------------- | --------- | ----------------------------- |
+| `outline`      | `#2b2a33` | contours                      |
+| `grass`        | `#7fb069` | terrain                       |
+| `grass-dark`   | `#5f8d4e` | ombre terrain                 |
+| `water`        | `#4f8fc0` | eau                           |
+| `water-dark`   | `#3a6f9c` | eau profonde                  |
+| `road`         | `#9d9a92` | routes                        |
+| `road-line`    | `#e8e4d8` | marquage                      |
+| `wall`         | `#e7d8bf` | murs maisons                  |
+| `wall-dark`    | `#c8b593` | murs côté ombre               |
+| `roof`         | `#b8433a` | toits maisons                 |
+| `roof-dark`    | `#8e332c` | toits ombre                   |
+| `stone`        | `#b9bcc4` | banques                       |
+| `stone-dark`   | `#8f939c` | banques ombre                 |
+| `glass`        | `#7fc3d8` | vitrage financier             |
+| `glass-dark`   | `#4e93a8` | vitrage ombre                 |
+| `brick`        | `#c9775a` | immeubles                     |
+| `brick-dark`   | `#9a5540` | immeubles ombre               |
+| `wood`         | `#8a6a45` | entrepôts, troncs             |
+| `leaf`         | `#4f9a4a` | feuillage                     |
+| `leaf-dark`    | `#356d33` | feuillage ombre               |
+| `gold`         | `#e0b84a` | accents (coffre)              |
+| `skin`         | `#f1c9a5` | personnages                   |
+| `goldDark`     | `#a8862f` | ombre des accents dorés       |
+| `windowLit`    | `#f2c96b` | fenêtre éclairée              |
+| `windowDark`   | `#3c4a58` | fenêtre éteinte               |
+| `glassPane`    | `#8fd0e2` | vitrage des tours             |
+| `metal`        | `#9aa4ae` | bardage, toitures métalliques |
+| `metalDark`    | `#6f7a86` | ombre du métal                |
+| `concrete`     | `#cfcabd` | dalles de toiture, socles     |
+| `concreteDark` | `#a7a396` | ombre du béton                |
+| `awning`       | `#3f7d6a` | stores et auvents             |
 
 Toute nouvelle couleur doit dériver de ces bases (± 12 % luminance).
 
-## 6. Niveaux
+## 6. Détail des volumes
+
+Les bâtiments ne sont pas des boîtes nues. Chaque volume porte, dessinés dans le
+repère de la face pour suivre la pente 2:1 :
+
+- un **soubassement** de 4 px, plus sombre, qui pose le bâtiment au sol ;
+- une **texture de matériau** : joints de brique, assises de pierre, nervures du
+  bardage métallique, meneaux du vitrage ;
+- des **bandeaux d'étage** d'un pixel marquant les niveaux ;
+- des **fenêtres** de deux pas de large avec appui, dont certaines éclairées,
+  tirées d'un générateur pseudo-aléatoire à graine fixe pour rester identiques
+  d'un rendu à l'autre ;
+- une **entrée** au rez-de-chaussée, propre au type de bâtiment ;
+- une **couronne** : acrotère et accessoires de toiture, ou toiture en pente
+  avec faîtage et cheminée.
+
+Le tramage en damier entre deux teintes remplace tout dégradé.
+
+Les toitures en pente sont empilées : chaque assise perd 2 px de large et 1 px
+de haut, ce qui donne exactement la pente 2:1 de la projection. Le versant droit
+est ensuite réassombri d'un bloc, et le faîtage plat garde la teinte éclairée
+puisqu'il regarde le ciel.
+
+Les entrées portent l'identité du bâtiment : porte de bois, portail à fronton,
+rideau métallique avec quai de chargement, porte de coffre circulaire à jante
+dorée, ou vitrine avec store.
+
+Les tuiles de sol ne sont jamais un aplat : herbe mouchetée en trois verts,
+crêtes d'eau suivant la pente 2:1, enrobé grenu bordé d'une bordure claire sur
+les deux arêtes hautes.
+
+## 7. Niveaux
 
 Un bâtiment de niveau supérieur est plus haut et/ou plus large, jamais d'un
 autre style. Les niveaux 1 à 5 partagent la même base et la même palette.
 
-## 7. Placeholders
+## 8. Placeholders
 
 Les sprites actuels sont **générés par script** (`scripts/generate-placeholder-assets.ts`)
 et portent `"placeholder": true` dans le manifest. Ils respectent la
 projection, l'échelle, la palette et l'ancrage, et servent de gabarit pour les
 assets finaux. Un placeholder n'est jamais présenté comme un asset final.
 
-## 8. Manifest (`public/assets/asset-manifest.json`)
+## 9. Manifest (`public/assets/asset-manifest.json`)
 
 ```json
 {

@@ -11,8 +11,12 @@ export class PixelCanvas {
   }
 
   set(x: number, y: number, rgba: [number, number, number, number]): void {
-    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return;
-    const i = (y * this.width + x) * 4;
+    // Coordinates must land on a pixel: a fractional index silently addresses
+    // the wrong row on a Uint8Array, which shows up as smeared artefacts.
+    const px = Math.round(x);
+    const py = Math.round(y);
+    if (px < 0 || py < 0 || px >= this.width || py >= this.height) return;
+    const i = (py * this.width + px) * 4;
     const [r, g, b, a] = rgba;
     if (a >= 255) {
       this.data[i] = r;
@@ -32,11 +36,11 @@ export class PixelCanvas {
     this.data[i + 3] = Math.round(oa * 255);
   }
 
-  /** Scanline fill of a polygon given integer vertices (even-odd rule). */
+  /** Scanline fill of a polygon (even-odd rule); vertices may be fractional. */
   fillPolygon(points: Array<[number, number]>, rgba: [number, number, number, number]): void {
     const ys = points.map((p) => p[1]);
-    const minY = Math.max(0, Math.min(...ys));
-    const maxY = Math.min(this.height - 1, Math.max(...ys));
+    const minY = Math.max(0, Math.ceil(Math.min(...ys)));
+    const maxY = Math.min(this.height - 1, Math.floor(Math.max(...ys)));
     for (let y = minY; y <= maxY; y += 1) {
       const xs: number[] = [];
       for (let i = 0; i < points.length; i += 1) {
@@ -96,6 +100,27 @@ export class PixelCanvas {
       if (e2 <= dx) {
         err += dx;
         y += sy;
+      }
+    }
+  }
+
+  /** Replaces one exact colour by another inside a rectangle. */
+  replaceInRect(x0: number, y0: number, w: number, h: number, from: RGBA, to: RGBA): void {
+    for (let y = y0; y < y0 + h; y += 1) {
+      for (let x = x0; x < x0 + w; x += 1) {
+        if (x < 0 || y < 0 || x >= this.width || y >= this.height) continue;
+        const i = (y * this.width + x) * 4;
+        if (
+          this.data[i] === from[0] &&
+          this.data[i + 1] === from[1] &&
+          this.data[i + 2] === from[2] &&
+          this.data[i + 3] === from[3]
+        ) {
+          this.data[i] = to[0];
+          this.data[i + 1] = to[1];
+          this.data[i + 2] = to[2];
+          this.data[i + 3] = to[3];
+        }
       }
     }
   }
