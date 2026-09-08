@@ -51,6 +51,39 @@ describe("WorldLayoutEngine", () => {
     }
   });
 
+  it("always leaves at least one free tile between two buildings", () => {
+    // A mix of 1x1 and 2x2 footprints in the same district used to touch on one
+    // side and leave a lone hole on the other: the slot pitch now reserves the
+    // largest footprint whatever the building actually takes.
+    const mixed = mapAssetsToWorldEntities([
+      { id: "a", name: "A", category: "ETF", valueCents: 90_000_000, currency: "EUR" },
+      { id: "b", name: "B", category: "ETF", valueCents: 80_000_000, currency: "EUR" },
+      { id: "c", name: "C", category: "ETF", valueCents: 70_000_000, currency: "EUR" },
+      { id: "d", name: "D", category: "ETF", valueCents: 100_000, currency: "EUR" },
+      { id: "e", name: "E", category: "ETF", valueCents: 90_000, currency: "EUR" },
+      { id: "f", name: "F", category: "ETF", valueCents: 80_000, currency: "EUR" },
+    ]);
+    const r = layoutWorld(mixed, { mapSize: 32, seed: 3, cityLevel: 4 });
+    expect(r.unplaced).toHaveLength(0);
+    const footprints = new Set(r.buildings.map((b) => `${b.footprint.w}x${b.footprint.h}`));
+    expect(footprints.size).toBeGreaterThan(1);
+    for (const a of r.buildings) {
+      for (const b of r.buildings) {
+        if (a.id === b.id) continue;
+        // Chebyshev distance between the two rectangles, edges included.
+        const dx = Math.max(
+          a.position.x - (b.position.x + b.footprint.w - 1),
+          b.position.x - (a.position.x + a.footprint.w - 1),
+        );
+        const dy = Math.max(
+          a.position.y - (b.position.y + b.footprint.h - 1),
+          b.position.y - (a.position.y + a.footprint.h - 1),
+        );
+        expect(Math.max(dx, dy), `${a.id} touche ${b.id}`).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
+
   it("reports entities that cannot fit instead of overlapping", () => {
     const many: WorldEntity[] = Array.from({ length: 60 }, (_, i) => ({
       ...entities[1]!,

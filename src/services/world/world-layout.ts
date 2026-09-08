@@ -124,25 +124,31 @@ function buildTerrain(mapSize: number, occupancy: Occupancy): WorldTerrainTile[]
   return tiles;
 }
 
+/** Largest footprint a building can take, in tiles. */
+const MAX_BUILDING_SIZE = 2;
+/** One slot: the largest footprint plus the street tile that follows it. */
+const SLOT_STRIDE = MAX_BUILDING_SIZE + 1;
+
+/**
+ * Slots along one axis. The pitch is the same for every footprint, so a 1x1
+ * building lands on the same street line as a 2x2 one instead of shifting the
+ * whole row. A stride of 2 used to give a 2x2 building no gap at all while a
+ * 1x1 left a lone hole beside it; reserving the largest footprint in every slot
+ * guarantees at least one free tile between two neighbours.
+ *
+ * `anchor` decides which end of the district is filled first.
+ */
+function axisPositions(start: number, length: number, anchor: "start" | "end"): number[] {
+  const positions: number[] = [];
+  for (let value = start; value + MAX_BUILDING_SIZE <= start + length; value += SLOT_STRIDE)
+    positions.push(value);
+  return anchor === "start" ? positions : positions.reverse();
+}
+
 /**
  * Buildings are placed by priority (value desc) on a spaced sub-grid inside
  * their district, row by row, so the result is stable when values change.
  */
-/**
- * Slots along one axis, on a stride-2 grid so a free tile separates buildings.
- * `anchor` decides which end of the district is filled first.
- */
-function axisPositions(
-  start: number,
-  length: number,
-  size: number,
-  anchor: "start" | "end",
-): number[] {
-  const positions: number[] = [];
-  for (let value = start; value + size <= start + length; value += 2) positions.push(value);
-  return anchor === "start" ? positions : positions.reverse();
-}
-
 function placeEntities(
   entities: readonly WorldEntity[],
   rects: Record<DistrictId, Rect>,
@@ -164,8 +170,8 @@ function placeEntities(
     const rect = rects[entity.district];
     const { w, h } = entity.footprint;
     let placed: GridPosition | null = null;
-    const xs = axisPositions(rect.x, rect.w, w, rect.anchorX);
-    const ys = axisPositions(rect.y, rect.h, h, rect.anchorY);
+    const xs = axisPositions(rect.x, rect.w, rect.anchorX);
+    const ys = axisPositions(rect.y, rect.h, rect.anchorY);
     for (const y of ys) {
       for (const x of xs) {
         if (occupancy.areaFree(x, y, w, h)) {
