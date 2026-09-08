@@ -23,6 +23,8 @@ export interface WorldCanvasProps {
   decorative?: boolean;
   /** Default true: zoom out until the map fits. False keeps a 1:1 slice. */
   fitToViewport?: boolean;
+  /** Default true. Hiding the labels leaves a clear view of the city. */
+  showSigns?: boolean;
 }
 
 export interface WorldControls {
@@ -54,6 +56,7 @@ export function WorldCanvas({
   onReady,
   decorative = false,
   fitToViewport = true,
+  showSigns = true,
 }: WorldCanvasProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<WorldApp | null>(null);
@@ -121,6 +124,10 @@ export function WorldCanvas({
   useEffect(() => {
     appRef.current?.setWorld(world);
   }, [world]);
+
+  useEffect(() => {
+    appRef.current?.setSignsVisible(showSigns);
+  }, [showSigns]);
 
   useEffect(() => {
     appRef.current?.setFocusInsetBottom(focusInsetBottom);

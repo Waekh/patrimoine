@@ -69,6 +69,20 @@ export interface WorldFish {
   periodMs: number;
 }
 
+/**
+ * A car on the road network. A moving car drives from `from` to `to` and wraps
+ * back to the start rather than reversing, so it never drives backwards; a
+ * parked one has `periodMs` at zero and simply sits there.
+ */
+export interface WorldVehicle {
+  id: string;
+  spriteId: string;
+  from: GridPosition;
+  to: GridPosition;
+  periodMs: number;
+  phaseMs: number;
+}
+
 export interface WorldCharacter {
   id: string;
   position: GridPosition;
@@ -121,6 +135,7 @@ export interface WorldState {
   buildings: WorldBuilding[];
   decorations: WorldDecoration[];
   fish: WorldFish[];
+  vehicles: WorldVehicle[];
   characters: WorldCharacter[];
   resources: WorldResources;
   camera: WorldCamera;

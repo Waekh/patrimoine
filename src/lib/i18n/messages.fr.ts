@@ -320,6 +320,7 @@ export const fr = {
   world: {
     title: "Mon monde",
     level: "Niveau",
+    hideSigns: "Masquer les panneaux",
     levels: {
       HAMLET: "Hameau",
       VILLAGE: "Village",

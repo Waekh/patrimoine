@@ -6,6 +6,8 @@ import {
   createUpgradeAnimation,
   updateCharacters,
   updateFish,
+  updateTrees,
+  updateVehicles,
   type TimedAnimation,
 } from "@/game/animation/animations";
 import { footprintCenter, type IsoGridConfig } from "@/game/map/iso";
@@ -42,6 +44,7 @@ export class WorldApp {
   private selectedId: string | null = null;
   private previous: WorldState | null = null;
   private suppressNextTap = false;
+  private signsVisible = true;
   private destroyed = false;
   private readonly onWheel = (e: WheelEvent) => {
     e.preventDefault();
@@ -132,6 +135,8 @@ export class WorldApp {
       },
     });
     this.world.addChild(this.scene.root);
+    // A rebuilt scene starts with every sign shown: reapply the current choice.
+    this.setSignsVisible(this.signsVisible);
 
     if (!this.options.reducedMotion()) {
       let index = 0;
@@ -151,6 +156,13 @@ export class WorldApp {
     }
     if (this.selectedId && !this.scene.buildings.has(this.selectedId)) this.selectedId = null;
     this.applySelection();
+  }
+
+  /** Hides or shows every building sign; the choice is a view preference. */
+  setSignsVisible(visible: boolean): void {
+    this.signsVisible = visible;
+    if (!this.scene) return;
+    for (const sign of this.scene.signs) sign.visible = visible;
   }
 
   select(buildingId: string | null, focus = true): void {
@@ -229,6 +241,8 @@ export class WorldApp {
     if (this.scene && !this.options.reducedMotion()) {
       updateCharacters(this.scene.characters, deltaMs, this.grid);
       updateFish(this.scene.fish, deltaMs, this.grid);
+      updateVehicles(this.scene.vehicles, deltaMs, this.grid);
+      updateTrees(this.scene.trees, deltaMs);
       if (this.scene.selection.visible) {
         this.scene.selection.alpha = 0.7 + 0.3 * Math.sin(performance.now() / 250);
       }

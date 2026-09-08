@@ -43,6 +43,10 @@ export const SPRITE_IDS = {
   park: "park_lv1",
   pond: "pond_lv1",
   fish: "fish_basic",
+  cars: {
+    x: ["car_red_x", "car_blue_x", "car_sand_x"],
+    y: ["car_red_y", "car_blue_y", "car_sand_y"],
+  },
   characterBasic: "character_basic",
   selection: "selection_ring",
   signBoard: "sign_board",

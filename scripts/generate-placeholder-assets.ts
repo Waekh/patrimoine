@@ -1173,6 +1173,238 @@ function generateSign(): void {
   );
 }
 
+/**
+ * Small car in the isometric grid. Two volumes, as a real saloon reads: a low
+ * body with chamfered ends, and a short greenhouse set back on top of it. A
+ * single tall box looked like a tank; the ratio between the two heights is what
+ * makes it a car.
+ *
+ * The visible faces are listed explicitly rather than derived from the winding
+ * of the plan: only the flank and the nose ever face the camera, and guessing
+ * that from the point order scrambled the shading.
+ *
+ * `axis` is the road it drives along: "x" runs down-right on screen, "y"
+ * down-left. Both are drawn rather than mirrored, so the light keeps coming
+ * from the top left in either direction.
+ */
+function carSprite(id: string, body: RGBA, axis: "x" | "y"): void {
+  const W = 34;
+  const H = 26;
+  const c = new PixelCanvas(W, H);
+  const len = axis === "x" ? { x: 2, y: 1 } : { x: -2, y: 1 };
+  const wid = axis === "x" ? { x: -2, y: 1 } : { x: 2, y: 1 };
+  const ox = W / 2 - (len.x * 7 + wid.x * 5) / 2;
+  // The roof of the greenhouse sits 8 px above the ground and the wheels 1 px
+  // below it, so the origin has to leave room for both inside the canvas.
+  const oy = 9;
+  /** Point at `a` steps along the car, `b` across it, `lift` px above ground. */
+  const P = (a: number, b: number, lift = 0): [number, number] => [
+    ox + len.x * a + wid.x * b,
+    oy + len.y * a + wid.y * b - lift,
+  ];
+  /** Wall between two plan points, from `from` to `to` pixels above ground. */
+  const face = (
+    from: readonly [number, number],
+    to: readonly [number, number],
+    bottom: number,
+    top: number,
+    tone: RGBA,
+  ) => {
+    c.fillPolygon(
+      [
+        P(from[0], from[1], top),
+        P(to[0], to[1], top),
+        P(to[0], to[1], bottom),
+        P(from[0], from[1], bottom),
+      ],
+      tone,
+    );
+  };
+  /** Outlines a chain of plan points at one height, and the ends vertically. */
+  const outline = (
+    chain: ReadonlyArray<readonly [number, number]>,
+    bottom: number,
+    top: number,
+  ) => {
+    for (let i = 0; i < chain.length - 1; i += 1) {
+      const [ax, ay] = P(chain[i]![0], chain[i]![1], bottom);
+      const [bx, by] = P(chain[i + 1]![0], chain[i + 1]![1], bottom);
+      c.line(ax, ay, bx, by, OUTLINE);
+    }
+    for (const end of [chain[0]!, chain[chain.length - 1]!]) {
+      const [ax, ay] = P(end[0], end[1], bottom);
+      const [bx, by] = P(end[0], end[1], top);
+      c.line(ax, ay, bx, by, OUTLINE);
+    }
+  };
+
+  // The flank faces one ground axis and the nose the other, so which of the two
+  // catches the light depends on the direction the car drives in.
+  const flank = axis === "x" ? body : shade(body, 0.72);
+  const nose = axis === "x" ? shade(body, 0.72) : body;
+  const roofTone = shade(body, 1.3);
+  const glass = hex(PIXEL_PALETTE.windowDark);
+  const tyre = hex(PIXEL_PALETTE.outline);
+  const BODY = 4;
+  const CABIN = 7;
+
+  c.fillPolygon(
+    [P(7.6, 2.5), P(3.5, 5.4), P(-0.6, 2.5), P(3.5, -0.4)],
+    hex(PIXEL_PALETTE.shadow, 70),
+  );
+
+  // Wheels before the body, so the sills cut across their top half.
+  for (const a of [1.4, 5.6]) {
+    const [wx, wy] = P(a, 4.8, 1);
+    c.fillRect(wx - 2, wy - 2, 5, 4, tyre);
+    c.fillRect(wx - 1, wy, 3, 1, shade(hex(PIXEL_PALETTE.metal), 0.7));
+  }
+
+  // Lower body. Plan corners, nose first, going round the near side.
+  const noseFar = [6.4, 0.8] as const;
+  const noseMid = [7, 1.9] as const;
+  const noseNear = [7, 3.1] as const;
+  const frontNear = [6.4, 4.2] as const;
+  const rearNear = [0.6, 4.2] as const;
+  const tailNear = [0, 3.1] as const;
+  const tailMid = [0, 1.9] as const;
+  const tailFar = [0.6, 0.8] as const;
+  const plan = [noseFar, noseMid, noseNear, frontNear, rearNear, tailNear, tailMid, tailFar];
+
+  face(frontNear, rearNear, 0, BODY, flank);
+  face(noseNear, frontNear, 0, BODY, shade(nose, 0.9));
+  face(noseMid, noseNear, 0, BODY, nose);
+  // The far chamfer faces away from the camera; painting it anyway put bright
+  // shards outside the silhouette.
+  // Sills: only the silhouette is outlined, never every wall, or the seams
+  // between adjacent panels show up as dark scratches across the bonnet.
+  outline([rearNear, frontNear, noseNear, noseMid], 0, BODY);
+  c.fillPolygon(
+    plan.map(([a, b]) => P(a, b, BODY)),
+    roofTone,
+  );
+  for (let i = 0; i < plan.length; i += 1) {
+    const [pa, pb] = plan[i]!;
+    const [qa, qb] = plan[(i + 1) % plan.length]!;
+    const a = P(pa, pb, BODY);
+    const b = P(qa, qb, BODY);
+    c.line(a[0], a[1], b[0], b[1], OUTLINE);
+  }
+
+  // Greenhouse, set back from the nose and inset from the sills.
+  const cabin = [
+    [4.6, 1.4],
+    [4.9, 2.0],
+    [4.9, 3.0],
+    [4.6, 3.6],
+    [2.1, 3.6],
+    [1.8, 3.0],
+    [1.8, 2.0],
+    [2.1, 1.4],
+  ] as const;
+  face(cabin[3]!, cabin[4]!, BODY, CABIN, glass);
+  face(cabin[2]!, cabin[3]!, BODY, CABIN, shade(glass, 1.25));
+  face(cabin[1]!, cabin[2]!, BODY, CABIN, shade(glass, 1.5));
+  outline([cabin[4]!, cabin[3]!, cabin[2]!, cabin[1]!], BODY, CABIN);
+  c.fillPolygon(
+    cabin.map(([a, b]) => P(a, b, CABIN)),
+    shade(glass, 0.8),
+  );
+  for (let i = 0; i < cabin.length; i += 1) {
+    const [pa, pb] = cabin[i]!;
+    const [qa, qb] = cabin[(i + 1) % cabin.length]!;
+    const a = P(pa, pb, CABIN);
+    const b = P(qa, qb, CABIN);
+    c.line(a[0], a[1], b[0], b[1], OUTLINE);
+  }
+
+  // Lamps, hung off the nose corners so they cannot drift off the panel.
+  const [hx, hy] = P(noseNear[0], noseNear[1], BODY);
+  c.fillRect(hx - 1, hy + 1, 2, 2, hex(PIXEL_PALETTE.windowLit));
+  const [tx, ty] = P(tailNear[0], tailNear[1], BODY);
+  c.fillRect(tx - 1, ty + 1, 2, 2, hex(PIXEL_PALETTE.roof));
+
+  save(
+    {
+      id,
+      type: "decoration",
+      file: `world/vehicles/${id}.png`,
+      width: W,
+      height: H,
+      anchor: { x: W / 2, y: oy + (len.y * 7 + wid.y * 5) / 2 },
+      footprint: { w: 1, h: 1 },
+    },
+    c,
+  );
+}
+
+function generateVehicles(): void {
+  const colours = [
+    ["red", PIXEL_PALETTE.roof],
+    ["blue", PIXEL_PALETTE.water],
+    ["sand", PIXEL_PALETTE.concrete],
+  ] as const;
+  for (const [name, colour] of colours) {
+    // `_x` drives along the grid x axis (down-right on screen), `_y` along y.
+    carSprite(`car_${name}_x`, hex(colour), "x");
+    carSprite(`car_${name}_y`, hex(colour), "y");
+  }
+}
+
+/**
+ * Application icon: the little house of the world, drawn to read at 32x32 and
+ * still at 16x16 once the browser halves it. Written to `src/app/icon.png` as
+ * well, which is where the App Router picks up the favicon.
+ */
+function generateAppIcon(): void {
+  const SIZE = 32;
+  const c = new PixelCanvas(SIZE, SIZE);
+  const cx = SIZE / 2;
+  const baseY = 25;
+  const box: IsoBox = { cx, baseY, w: 24, h: 12, height: 10 };
+  const wall = hex(PIXEL_PALETTE.wall);
+  const tile = hex(PIXEL_PALETTE.roof);
+
+  // Ground shadow, then the walls.
+  c.fillPolygon(
+    [
+      [cx + 1, baseY + 1],
+      [cx + 13, baseY + 7],
+      [cx + 1, baseY + 13],
+      [cx - 11, baseY + 7],
+    ],
+    hex(PIXEL_PALETTE.grassDark),
+  );
+  drawIsoBox(c, box, { base: wall, outline: OUTLINE });
+  // A lit window on each face, and the door on the front one.
+  fillFaceRect(c, box, "left", 1, 5, 1, 3, hex(PIXEL_PALETTE.windowLit));
+  fillFaceRect(c, box, "right", 4, 5, 1, 3, shade(hex(PIXEL_PALETTE.windowLit), 0.85));
+  fillFaceRect(c, box, "left", 3, 1, 2, 6, hex(PIXEL_PALETTE.wood));
+  fillFaceRect(c, box, "left", 4, 4, 1, 1, hex(PIXEL_PALETTE.gold));
+  // Hip roof with the right slope in shadow, and a chimney.
+  const roofY = baseY - box.height;
+  drawHipRoof(c, cx, roofY, 28, 14, 6, tile, OUTLINE);
+  c.replaceInRect(cx, roofY - 10, 16, 26, tile, shade(tile, 0.76));
+  const chimney: IsoBox = { cx: cx + 6, baseY: roofY - 3, w: 4, h: 2, height: 5 };
+  drawIsoBox(c, chimney, { base: hex(PIXEL_PALETTE.brickDark), outline: OUTLINE });
+
+  save(
+    {
+      id: "icon_house",
+      type: "ui",
+      file: "ui/icon_house.png",
+      width: SIZE,
+      height: SIZE,
+      anchor: { x: cx, y: baseY },
+    },
+    c,
+  );
+  // The App Router serves the favicon from this exact path.
+  const icon = path.join(process.cwd(), "src", "app", "icon.png");
+  mkdirSync(path.dirname(icon), { recursive: true });
+  writeFileSync(icon, c.toPng());
+}
+
 /** Glyph atlas for in-world signs; framed by index at render time. */
 function generateFont(): void {
   const atlas = buildFontAtlas(hex(PIXEL_PALETTE.outline));
@@ -1252,6 +1484,8 @@ function main(): void {
   generateFish();
   generateSign();
   generateFont();
+  generateAppIcon();
+  generateVehicles();
   generateCharacter();
   generateEffects();
   const manifest = {

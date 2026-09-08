@@ -3,36 +3,46 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --bg: #f6f5f2;
-  --surface: #ffffff;
-  --surface-2: #f0eee9;
-  --border: #e3e0d8;
-  --fg: #17181a;
-  --fg-muted: #6b6e75;
-  --accent: #1f6f5b;
-  --accent-hover: #185a4a;
+  /*
+   * Every colour is taken from the world palette (`src/config/pixel-palette.ts`)
+   * or derived from it, so the interface and the map read as one artefact
+   * rather than a pixel scene dropped into a generic dashboard.
+   */
+  --bg: #f2ede2; /* parchment, the wall tone lightened */
+  --surface: #fdfbf6;
+  --surface-2: #ece6d9;
+  --border: #cfc7b4;
+  /* Outline of every sprite; the interface borrows it for control borders. */
+  --ink: #2b2a33;
+  --fg: #2b2a33;
+  --fg-muted: #5c5749;
+  --accent: #356d33; /* leafDark */
+  --accent-hover: #2a5828;
   --accent-fg: #ffffff;
-  --positive: #1f7a4d;
-  --negative: #b23a3a;
-  --warning: #9a6b00;
-  --focus: #2f6fdd;
+  --positive: #276b3b;
+  --negative: #8f2f28; /* the roof red, darkened to stay readable as text */
+  --warning: #7a5810; /* gold, darkened to stay readable as text */
+  --focus: #3a6f9c; /* waterDark */
   --world-bg: #1b2a3a;
 }
 
 .dark {
-  --bg: #121314;
-  --surface: #1a1b1d;
-  --surface-2: #232527;
-  --border: #2e3033;
-  --fg: #ececea;
-  --fg-muted: #9a9ca3;
-  --accent: #3a9f84;
-  --accent-hover: #4db597;
-  --accent-fg: #0f1512;
-  --positive: #48b57f;
-  --negative: #e06767;
-  --warning: #d9a53a;
-  --focus: #6d9cf0;
+  --bg: #16212c;
+  --surface: #1b2a3a; /* the sky the world is rendered against */
+  --surface-2: #24374a;
+  --border: #35506b;
+  /* On the dark sky the outline is the light one: a near-black edge would
+     disappear, so the offset shadow reads as a highlight instead. */
+  --ink: #8aa2ba;
+  --fg: #eae4d6;
+  --fg-muted: #a3b0bd;
+  --accent: #6fbf5f;
+  --accent-hover: #86d074;
+  --accent-fg: #10190f;
+  --positive: #6fbf5f;
+  --negative: #ec9a90;
+  --warning: #e0b84a; /* gold reads directly on the dark sky */
+  --focus: #8fd0e2; /* glassPane */
   --world-bg: #0f171f;
 }
 
@@ -50,12 +60,14 @@
   --color-negative: var(--negative);
   --color-warning: var(--warning);
   --color-focus: var(--focus);
+  --color-ink: var(--ink);
   --color-world-bg: var(--world-bg);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
+  /* The world has no rounded corner and no blur: neither does the chrome. */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 2px;
 }
 
 html {
@@ -79,6 +91,26 @@ body {
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
+}
+
+/*
+ * Hard offset shadow instead of a blur: the same trick the sprites use to sit
+ * a volume on the ground. `.pressable` moves the element onto its shadow when
+ * activated, which reads as a physical press without any animation.
+ */
+.hard-shadow {
+  box-shadow: 2px 2px 0 0 var(--ink);
+}
+
+.pressable:not(:disabled):active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pressable:not(:disabled):active {
+    transform: none;
+  }
 }
 
 .pixelated {

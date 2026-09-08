@@ -22,6 +22,7 @@ import type {
   WorldDecoration,
   WorldFish,
   WorldState,
+  WorldVehicle,
 } from "@/types/world";
 import { createLabel } from "./label";
 
@@ -44,6 +45,19 @@ export interface FishNode {
   elapsedMs: number;
 }
 
+export interface VehicleNode {
+  vehicle: WorldVehicle;
+  sprite: Sprite;
+  elapsedMs: number;
+}
+
+export interface TreeNode {
+  sprite: Sprite;
+  /** Phase offset so a wood does not sway in unison. */
+  phaseMs: number;
+  elapsedMs: number;
+}
+
 export interface Scene {
   root: Container;
   terrain: Container;
@@ -51,6 +65,10 @@ export interface Scene {
   buildings: Map<string, BuildingNode>;
   characters: CharacterNode[];
   fish: FishNode[];
+  vehicles: VehicleNode[];
+  trees: TreeNode[];
+  /** Sign containers, so the view can hide the labels on demand. */
+  signs: Container[];
   selection: Sprite;
 }
 
@@ -96,6 +114,7 @@ export function buildScene(
   terrain.on("pointertap", () => callbacks.onGroundTap());
 
   const buildings = new Map<string, BuildingNode>();
+  const signs: Container[] = [];
   for (const building of state.buildings) {
     const node = buildBuilding(building, registry, grid, callbacks);
     if (!node) continue;
@@ -104,14 +123,28 @@ export function buildScene(
     // The sign is a sibling, not a child: as its own entity it sorts against
     // the neighbours in front of it instead of inheriting the building's depth.
     const sign = buildSign(building, registry, grid, callbacks);
-    if (sign) entities.addChild(sign);
+    if (sign) {
+      signs.push(sign);
+      entities.addChild(sign);
+    }
   }
 
+  const trees: TreeNode[] = [];
   for (const decoration of state.decorations) {
     const node = buildDecoration(decoration, registry, grid);
     if (!node) continue;
     node.eventMode = "none";
     entities.addChild(node);
+    // Foliage sways; a park or a pond is built and stays put.
+    if (decoration.kind === "TREE") {
+      // The pivot goes to the foot of the trunk so the crown leans, not the tree.
+      node.anchor.set(node.anchor.x, node.anchor.y);
+      trees.push({
+        sprite: node,
+        phaseMs: (decoration.position.x * 733 + decoration.position.y * 271) % 4000,
+        elapsedMs: 0,
+      });
+    }
   }
 
   const characters: CharacterNode[] = [];
@@ -139,13 +172,36 @@ export function buildScene(
     fish.push({ fish: one, sprite, elapsedMs: 0 });
   }
 
+  const vehicles: VehicleNode[] = [];
+  for (const vehicle of state.vehicles) {
+    const sprite = spriteFor(registry, vehicle.spriteId);
+    if (!sprite) continue;
+    const { x, y } = gridToScreen(vehicle.from, grid);
+    sprite.position.set(x, y);
+    sprite.zIndex = zIndexOf(vehicle.from) + 1;
+    sprite.eventMode = "none";
+    entities.addChild(sprite);
+    vehicles.push({ vehicle, sprite, elapsedMs: vehicle.phaseMs });
+  }
+
   const selection = spriteFor(registry, SPRITE_IDS.selection) ?? new Sprite();
   selection.eventMode = "none";
   selection.visible = false;
   selection.zIndex = 0;
   entities.addChild(selection);
 
-  return { root, terrain, entities, buildings, characters, fish, selection };
+  return {
+    root,
+    terrain,
+    entities,
+    buildings,
+    characters,
+    fish,
+    vehicles,
+    trees,
+    signs,
+    selection,
+  };
 }
 
 /**

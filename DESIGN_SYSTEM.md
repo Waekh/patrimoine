@@ -1,12 +1,22 @@
 # Design System — Patrimoine.net
 
-Le monde est rétro (pixel art). L'interface est contemporaine. Le contraste est
-voulu : une UI calme, précise et dense entoure une scène vivante.
+Le monde et l'interface partagent le même langage graphique. Le projet a d'abord
+opposé une UI contemporaine à un monde rétro ; ce choix a été inversé, parce que
+le contraste faisait lire la scène comme une image collée dans un tableau de
+bord générique.
 
 ## 1. Principes
 
-- Typographie nette, hiérarchie claire, espaces blancs.
-- Bordures discrètes (1 px), rayons modérés (6–10 px), ombres légères ou absentes.
+- Toutes les couleurs viennent de la palette du monde (`src/config/pixel-palette.ts`)
+  ou en dérivent. Le contraste WCAG AA est vérifié par `src/app/globals.test.ts`,
+  qui lit les tokens directement dans la feuille de style.
+- Aucun angle arrondi sur les contrôles et aucun flou : le monde n'en a pas non
+  plus. Les rayons valent 0, la classe `.hard-shadow` décale l'ombre de 2 px sans
+  la flouter, et `.pressable` déplace l'élément sur son ombre à l'activation.
+- Bordures de 2 px en `--color-ink`, la teinte du contour des sprites.
+- Typographie nette, hiérarchie claire, espaces blancs. La police reste Geist :
+  une police bitmap serait illisible en corps de texte. Le pixel n'est utilisé
+  que dans la scène, où `font_5x7` dessine les enseignes.
 - Animations courtes (≤ 200 ms), micro‑interactions, respect de `prefers-reduced-motion`.
 - Jamais : emojis, gradients violets génériques, glassmorphism massif, ombres lourdes,
   illustrations stock, boutons géants, textes marketing artificiels.
@@ -14,20 +24,21 @@ voulu : une UI calme, précise et dense entoure une scène vivante.
 
 ## 2. Tokens (Tailwind 4, `src/app/globals.css`)
 
-| Token               | Valeur (clair) | Usage                            |
-| ------------------- | -------------- | -------------------------------- |
-| `--color-bg`        | `#f6f5f2`      | fond de page                     |
-| `--color-surface`   | `#ffffff`      | cartes, panneaux                 |
-| `--color-surface-2` | `#f0eee9`      | fond secondaire, lignes zébrées  |
-| `--color-border`    | `#e3e0d8`      | bordures                         |
-| `--color-fg`        | `#17181a`      | texte principal                  |
-| `--color-fg-muted`  | `#6b6e75`      | texte secondaire                 |
-| `--color-accent`    | `#1f6f5b`      | actions primaires (vert profond) |
-| `--color-accent-fg` | `#ffffff`      | texte sur accent                 |
-| `--color-positive`  | `#1f7a4d`      | variation positive               |
-| `--color-negative`  | `#b23a3a`      | variation négative               |
-| `--color-warning`   | `#9a6b00`      | avertissements                   |
-| `--color-focus`     | `#2f6fdd`      | anneau de focus                  |
+| Token               | Valeur (clair) | Usage                           |
+| ------------------- | -------------- | ------------------------------- |
+| `--color-bg`        | `#f2ede2`      | fond de page (parchemin)        |
+| `--color-surface`   | `#fdfbf6`      | cartes, panneaux                |
+| `--color-surface-2` | `#ece6d9`      | fond secondaire, lignes zébrées |
+| `--color-border`    | `#cfc7b4`      | séparateurs discrets            |
+| `--color-ink`       | `#2b2a33`      | contour des contrôles et ombres |
+| `--color-fg`        | `#2b2a33`      | texte principal                 |
+| `--color-fg-muted`  | `#5c5749`      | texte secondaire                |
+| `--color-accent`    | `#356d33`      | actions primaires (`leafDark`)  |
+| `--color-accent-fg` | `#ffffff`      | texte sur accent                |
+| `--color-positive`  | `#276b3b`      | variation positive              |
+| `--color-negative`  | `#8f2f28`      | variation négative (toit)       |
+| `--color-warning`   | `#7a5810`      | avertissements (or assombri)    |
+| `--color-focus`     | `#3a6f9c`      | anneau de focus (`waterDark`)   |
 
 Le mode sombre inverse les surfaces (`#121314`, `#1a1b1d`) et conserve les accents.
 

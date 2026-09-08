@@ -1,19 +1,29 @@
 import { t } from "@/lib/i18n";
 
-/** Wordmark with a small isometric cube: the only "brand" graphic. */
+/**
+ * Wordmark with the little house of the world, drawn as flat polygons on the
+ * same 2:1 isometric grid as the sprites and in the same palette. It is the
+ * shape used for the favicon too (`src/app/icon.png`).
+ */
 export function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <span className="inline-flex items-center gap-2 font-semibold tracking-tight">
       <svg
-        width="20"
-        height="20"
-        viewBox="0 0 20 20"
+        width="22"
+        height="22"
+        viewBox="0 0 22 22"
         aria-hidden="true"
         shapeRendering="crispEdges"
       >
-        <path d="M10 1 L19 6 L10 11 L1 6 Z" fill="#7fb069" />
-        <path d="M1 6 L10 11 L10 19 L1 14 Z" fill="#1f6f5b" />
-        <path d="M19 6 L10 11 L10 19 L19 14 Z" fill="#185a4a" />
+        {/* Walls: left face lit, right face in shadow. */}
+        <path d="M2 11 L11 16 L11 21 L2 16 Z" fill="#e7d8bf" />
+        <path d="M20 11 L11 16 L11 21 L20 16 Z" fill="#c8b593" />
+        {/* Hip roof, right slope darker, over a 1 px outline. */}
+        <path d="M11 2 L21 8 L11 14 L1 8 Z" fill="#b8433a" />
+        <path d="M11 2 L21 8 L11 14 Z" fill="#8e332c" />
+        {/* Door and a lit window. */}
+        <path d="M8 15 L10 16 L10 20 L8 19 Z" fill="#8a6a45" />
+        <path d="M14 15 L16 14 L16 17 L14 18 Z" fill="#f2c96b" />
       </svg>
       {compact ? null : <span>{t("app.name")}</span>}
     </span>

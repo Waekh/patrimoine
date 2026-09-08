@@ -12,11 +12,16 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
 }
 
+/**
+ * Solid variants sit on a hard offset shadow and move onto it when pressed,
+ * the same way a sprite sits on its ground shadow. `ghost` stays flat: it is
+ * used inline, where a raised block would be noise.
+ */
 const variantClasses: Record<Variant, string> = {
-  primary: "bg-accent text-accent-fg hover:bg-accent-hover border-transparent",
-  secondary: "bg-surface text-fg border-border hover:bg-surface-2",
+  primary: "bg-accent text-accent-fg hover:bg-accent-hover border-ink hard-shadow pressable",
+  secondary: "bg-surface text-fg border-ink hover:bg-surface-2 hard-shadow pressable",
   ghost: "bg-transparent text-fg border-transparent hover:bg-surface-2",
-  danger: "bg-surface text-negative border-border hover:bg-surface-2",
+  danger: "bg-surface text-negative border-ink hover:bg-surface-2 hard-shadow pressable",
 };
 
 const sizeClasses: Record<Size, string> = {
@@ -40,7 +45,7 @@ export function Button({
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-md border font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex items-center justify-center gap-2 rounded-md border-2 font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none",
         variantClasses[variant],
         sizeClasses[size],
         className,

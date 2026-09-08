@@ -1,4 +1,10 @@
-import type { BuildingNode, CharacterNode, FishNode } from "@/game/rendering/scene-builder";
+import type {
+  BuildingNode,
+  CharacterNode,
+  FishNode,
+  TreeNode,
+  VehicleNode,
+} from "@/game/rendering/scene-builder";
 import { gridToScreen, type IsoGridConfig } from "@/game/map/iso";
 import { zIndexOf } from "@/services/world/world-layout";
 import type { GridPosition } from "@/types/world";
@@ -140,5 +146,43 @@ export function updateFish(fish: FishNode[], deltaMs: number, grid: IsoGridConfi
     const { x, y } = gridToScreen(pos, grid);
     node.sprite.position.set(Math.round(x), Math.round(y));
     node.sprite.scale.x = forward ? 1 : -1;
+  }
+}
+
+/**
+ * Cars drive from one end of their road to the other and wrap back to the
+ * start, so they never reverse into their own tail lights. A parked car has no
+ * period and simply stays where it was put.
+ */
+export function updateVehicles(
+  vehicles: VehicleNode[],
+  deltaMs: number,
+  grid: IsoGridConfig,
+): void {
+  for (const node of vehicles) {
+    const { from, to, periodMs } = node.vehicle;
+    if (periodMs <= 0) continue;
+    node.elapsedMs += deltaMs;
+    const progress = (node.elapsedMs % periodMs) / periodMs;
+    const pos = {
+      x: from.x + (to.x - from.x) * progress,
+      y: from.y + (to.y - from.y) * progress,
+    };
+    const { x, y } = gridToScreen(pos, grid);
+    node.sprite.position.set(Math.round(x), Math.round(y));
+    node.sprite.zIndex = zIndexOf({ x: Math.round(pos.x), y: Math.round(pos.y) }) + 1;
+  }
+}
+
+/** Amplitude of the sway, as a fraction of the sprite width. */
+const SWAY = 0.02;
+const SWAY_PERIOD_MS = 3600;
+
+/** Foliage leans a little, out of phase from tree to tree. */
+export function updateTrees(trees: TreeNode[], deltaMs: number): void {
+  for (const node of trees) {
+    node.elapsedMs += deltaMs;
+    const phase = ((node.elapsedMs + node.phaseMs) % SWAY_PERIOD_MS) / SWAY_PERIOD_MS;
+    node.sprite.skew.x = Math.sin(phase * Math.PI * 2) * SWAY;
   }
 }

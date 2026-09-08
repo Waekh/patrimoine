@@ -915,6 +915,114 @@
       "placeholder": true
     },
     {
+      "id": "icon_house",
+      "type": "ui",
+      "file": "ui/icon_house.png",
+      "width": 32,
+      "height": 32,
+      "anchor": {
+        "x": 16,
+        "y": 25
+      },
+      "placeholder": true
+    },
+    {
+      "id": "car_red_x",
+      "type": "decoration",
+      "file": "world/vehicles/car_red_x.png",
+      "width": 34,
+      "height": 26,
+      "anchor": {
+        "x": 17,
+        "y": 15
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "car_red_y",
+      "type": "decoration",
+      "file": "world/vehicles/car_red_y.png",
+      "width": 34,
+      "height": 26,
+      "anchor": {
+        "x": 17,
+        "y": 15
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "car_blue_x",
+      "type": "decoration",
+      "file": "world/vehicles/car_blue_x.png",
+      "width": 34,
+      "height": 26,
+      "anchor": {
+        "x": 17,
+        "y": 15
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "car_blue_y",
+      "type": "decoration",
+      "file": "world/vehicles/car_blue_y.png",
+      "width": 34,
+      "height": 26,
+      "anchor": {
+        "x": 17,
+        "y": 15
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "car_sand_x",
+      "type": "decoration",
+      "file": "world/vehicles/car_sand_x.png",
+      "width": 34,
+      "height": 26,
+      "anchor": {
+        "x": 17,
+        "y": 15
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "car_sand_y",
+      "type": "decoration",
+      "file": "world/vehicles/car_sand_y.png",
+      "width": 34,
+      "height": 26,
+      "anchor": {
+        "x": 17,
+        "y": 15
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
       "id": "character_basic",
       "type": "character",
       "file": "world/characters/character_basic.png",

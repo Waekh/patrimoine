@@ -46,6 +46,7 @@ export function WorldView({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [controls, setControls] = useState<WorldControls | null>(null);
   const [listOpen, setListOpen] = useState(false);
+  const [showSigns, setShowSigns] = useState(true);
   const selected = useMemo(
     () => world.buildings.find((b) => b.id === selectedId) ?? null,
     [world, selectedId],
@@ -117,11 +118,18 @@ export function WorldView({
           manifest={manifest}
           selectedBuildingId={selectedId}
           onSelect={setSelectedId}
+          showSigns={showSigns}
           animateOnMount={animateOnMount}
           focusInsetBottom={focusInsetBottom}
           onReady={setControls}
         />
-        <WorldHud resources={world.resources} controls={controls} deltaBps={deltaBps} />
+        <WorldHud
+          resources={world.resources}
+          controls={controls}
+          deltaBps={deltaBps}
+          showSigns={showSigns}
+          onToggleSigns={setShowSigns}
+        />
         {banner ? (
           <div className="pointer-events-none absolute top-3 right-3 max-w-xs">
             <Notice tone="info">{banner}</Notice>
