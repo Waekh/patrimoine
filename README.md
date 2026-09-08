@@ -67,15 +67,16 @@ sont stockés dans `auth.users` avec un hachage scrypt.
 
 ## Scripts
 
-| Commande                                | Description                                                             |
-| --------------------------------------- | ----------------------------------------------------------------------- |
-| `npm run dev` / `build` / `start`       | Next.js                                                                 |
-| `npm run lint` · `typecheck` · `format` | Qualité                                                                 |
-| `npm run test`                          | Tests unitaires (Vitest)                                                |
-| `npm run test:integration`              | Tests d'intégration PostgreSQL (RLS, services) — base `patrimoine_test` |
-| `npm run test:e2e`                      | Playwright (build + serveur de test automatiques)                       |
-| `npm run assets:generate`               | Régénère les sprites _placeholder_ et `asset-manifest.json`             |
-| `npm run check`                         | lint + typecheck + tests + build                                        |
+| Commande                                     | Description                                                             |
+| -------------------------------------------- | ----------------------------------------------------------------------- |
+| `npm run dev` / `build` / `start`            | Next.js                                                                 |
+| `npm run lint` · `typecheck` · `format`      | Qualité                                                                 |
+| `npm run test`                               | Tests unitaires (Vitest)                                                |
+| `npm run test:integration`                   | Tests d'intégration PostgreSQL (RLS, services) — base `patrimoine_test` |
+| `npm run test:e2e`                           | Playwright (build + serveur de test automatiques)                       |
+| `npm run assets:generate`                    | Régénère les sprites _placeholder_ et `asset-manifest.json`             |
+| `npm run assets:catalogue -- <fichier.html>` | Planche de contact de tous les sprites, pour revue visuelle             |
+| `npm run check`                              | lint + typecheck + tests + build                                        |
 
 Les tests d'intégration et E2E utilisent `TEST_DATABASE_URL` / `E2E_DATABASE_URL`
 (défaut : `postgres://postgres:postgres@127.0.0.1:5432/patrimoine_test`). Jamais de données de production.
