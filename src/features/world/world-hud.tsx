@@ -41,7 +41,9 @@ export function WorldHud({
           ) : null}
         </span>
       </div>
-      <label className="border-ink bg-surface/95 absolute top-3 right-3 flex cursor-pointer items-center gap-2 rounded-md border-2 px-3 py-2 text-xs font-medium select-none">
+      {/* Bottom right with the camera controls: the top right is taken by the
+          demonstration banner, which was covering this switch entirely. */}
+      <label className="border-ink bg-surface/95 absolute right-3 bottom-32 flex cursor-pointer items-center gap-2 rounded-md border-2 px-3 py-2 text-xs font-medium select-none">
         <input
           type="checkbox"
           className="sr-only"
@@ -61,8 +63,10 @@ export function WorldHud({
           }`}
         >
           <span
-            className={`bg-ink absolute top-0 block h-3 w-3 transition-[left] ${
-              showSigns ? "left-0" : "left-4"
+            // Light knob once the track turns accent green: a dark one on dark
+            // green was barely visible.
+            className={`absolute top-0 block h-3 w-3 transition-[left] ${
+              showSigns ? "bg-ink left-0" : "bg-surface left-4"
             }`}
           />
         </span>

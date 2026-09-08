@@ -930,11 +930,11 @@
       "id": "car_red_x",
       "type": "decoration",
       "file": "world/vehicles/car_red_x.png",
-      "width": 34,
-      "height": 26,
+      "width": 46,
+      "height": 34,
       "anchor": {
-        "x": 17,
-        "y": 15
+        "x": 23,
+        "y": 18
       },
       "footprint": {
         "w": 1,
@@ -946,11 +946,11 @@
       "id": "car_red_y",
       "type": "decoration",
       "file": "world/vehicles/car_red_y.png",
-      "width": 34,
-      "height": 26,
+      "width": 46,
+      "height": 34,
       "anchor": {
-        "x": 17,
-        "y": 15
+        "x": 23,
+        "y": 18
       },
       "footprint": {
         "w": 1,
@@ -962,11 +962,11 @@
       "id": "car_blue_x",
       "type": "decoration",
       "file": "world/vehicles/car_blue_x.png",
-      "width": 34,
-      "height": 26,
+      "width": 46,
+      "height": 34,
       "anchor": {
-        "x": 17,
-        "y": 15
+        "x": 23,
+        "y": 18
       },
       "footprint": {
         "w": 1,
@@ -978,11 +978,11 @@
       "id": "car_blue_y",
       "type": "decoration",
       "file": "world/vehicles/car_blue_y.png",
-      "width": 34,
-      "height": 26,
+      "width": 46,
+      "height": 34,
       "anchor": {
-        "x": 17,
-        "y": 15
+        "x": 23,
+        "y": 18
       },
       "footprint": {
         "w": 1,
@@ -994,11 +994,11 @@
       "id": "car_sand_x",
       "type": "decoration",
       "file": "world/vehicles/car_sand_x.png",
-      "width": 34,
-      "height": 26,
+      "width": 46,
+      "height": 34,
       "anchor": {
-        "x": 17,
-        "y": 15
+        "x": 23,
+        "y": 18
       },
       "footprint": {
         "w": 1,
@@ -1010,11 +1010,11 @@
       "id": "car_sand_y",
       "type": "decoration",
       "file": "world/vehicles/car_sand_y.png",
-      "width": 34,
-      "height": 26,
+      "width": 46,
+      "height": 34,
       "anchor": {
-        "x": 17,
-        "y": 15
+        "x": 23,
+        "y": 18
       },
       "footprint": {
         "w": 1,

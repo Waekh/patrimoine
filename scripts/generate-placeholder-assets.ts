@@ -1174,155 +1174,141 @@ function generateSign(): void {
 }
 
 /**
- * Small car in the isometric grid. Two volumes, as a real saloon reads: a low
- * body with chamfered ends, and a short greenhouse set back on top of it. A
- * single tall box looked like a tank; the ratio between the two heights is what
- * makes it a car.
+ * Car on the isometric grid, drawn as a single body volume with the glazing
+ * painted onto it. Earlier attempts stacked a cabin box on a chassis box; the
+ * outline around that second volume read as a crate strapped to the roof, which
+ * is what made the sprites look like tanks. A real car has one continuous shell
+ * and a dark glasshouse sunk into its upper half.
  *
- * The visible faces are listed explicitly rather than derived from the winding
- * of the plan: only the flank and the nose ever face the camera, and guessing
- * that from the point order scrambled the shading.
- *
- * `axis` is the road it drives along: "x" runs down-right on screen, "y"
+ * `axis` is the road the car drives along: "x" runs down-right on screen, "y"
  * down-left. Both are drawn rather than mirrored, so the light keeps coming
  * from the top left in either direction.
  */
 function carSprite(id: string, body: RGBA, axis: "x" | "y"): void {
-  const W = 34;
-  const H = 26;
+  const W = 46;
+  const H = 34;
   const c = new PixelCanvas(W, H);
+  // Steps of the two ground axes, in screen pixels.
   const len = axis === "x" ? { x: 2, y: 1 } : { x: -2, y: 1 };
   const wid = axis === "x" ? { x: -2, y: 1 } : { x: 2, y: 1 };
-  const ox = W / 2 - (len.x * 7 + wid.x * 5) / 2;
-  // The roof of the greenhouse sits 8 px above the ground and the wheels 1 px
-  // below it, so the origin has to leave room for both inside the canvas.
-  const oy = 9;
+  /** Car footprint in grid units, and the two heights that matter. */
+  const LEN = 10;
+  const WID = 6;
+  /** Sills sit above the ground, which is what lets the wheels show. */
+  const SILL = 2;
+  const BELT = 8;
+  const ox = W / 2 - (len.x * LEN + wid.x * WID) / 2;
+  const oy = 10 + BELT - (len.y * LEN + wid.y * WID) / 2;
   /** Point at `a` steps along the car, `b` across it, `lift` px above ground. */
   const P = (a: number, b: number, lift = 0): [number, number] => [
-    ox + len.x * a + wid.x * b,
-    oy + len.y * a + wid.y * b - lift,
+    Math.round(ox + len.x * a + wid.x * b),
+    Math.round(oy + len.y * a + wid.y * b - lift),
   ];
-  /** Wall between two plan points, from `from` to `to` pixels above ground. */
-  const face = (
-    from: readonly [number, number],
-    to: readonly [number, number],
-    bottom: number,
-    top: number,
-    tone: RGBA,
-  ) => {
-    c.fillPolygon(
-      [
-        P(from[0], from[1], top),
-        P(to[0], to[1], top),
-        P(to[0], to[1], bottom),
-        P(from[0], from[1], bottom),
-      ],
-      tone,
-    );
-  };
-  /** Outlines a chain of plan points at one height, and the ends vertically. */
-  const outline = (
-    chain: ReadonlyArray<readonly [number, number]>,
-    bottom: number,
-    top: number,
-  ) => {
-    for (let i = 0; i < chain.length - 1; i += 1) {
-      const [ax, ay] = P(chain[i]![0], chain[i]![1], bottom);
-      const [bx, by] = P(chain[i + 1]![0], chain[i + 1]![1], bottom);
-      c.line(ax, ay, bx, by, OUTLINE);
-    }
-    for (const end of [chain[0]!, chain[chain.length - 1]!]) {
-      const [ax, ay] = P(end[0], end[1], bottom);
-      const [bx, by] = P(end[0], end[1], top);
-      c.line(ax, ay, bx, by, OUTLINE);
-    }
-  };
 
+  // Plan of the shell: a hexagon, so the nose and tail taper.
+  const plan: Array<[number, number]> = [
+    [10, 1.9],
+    [10, 4.1],
+    [9, 4.9],
+    [1, 4.9],
+    [0, 4.1],
+    [0, 1.9],
+    [1, 1.1],
+    [9, 1.1],
+  ];
   // The flank faces one ground axis and the nose the other, so which of the two
   // catches the light depends on the direction the car drives in.
-  const flank = axis === "x" ? body : shade(body, 0.72);
-  const nose = axis === "x" ? shade(body, 0.72) : body;
-  const roofTone = shade(body, 1.3);
+  const lit = axis === "x" ? body : shade(body, 0.68);
+  const dark = axis === "x" ? shade(body, 0.68) : body;
   const glass = hex(PIXEL_PALETTE.windowDark);
-  const tyre = hex(PIXEL_PALETTE.outline);
-  const BODY = 4;
-  const CABIN = 7;
 
-  c.fillPolygon(
-    [P(7.6, 2.5), P(3.5, 5.4), P(-0.6, 2.5), P(3.5, -0.4)],
-    hex(PIXEL_PALETTE.shadow, 70),
-  );
+  const wall = (i: number, j: number, from: number, to: number, tone: RGBA) => {
+    const [a1, b1] = plan[i]!;
+    const [a2, b2] = plan[j]!;
+    c.fillPolygon([P(a1, b1, to), P(a2, b2, to), P(a2, b2, from), P(a1, b1, from)], tone);
+  };
 
-  // Wheels before the body, so the sills cut across their top half.
-  for (const a of [1.4, 5.6]) {
-    const [wx, wy] = P(a, 4.8, 1);
-    c.fillRect(wx - 2, wy - 2, 5, 4, tyre);
-    c.fillRect(wx - 1, wy, 3, 1, shade(hex(PIXEL_PALETTE.metal), 0.7));
+  c.fillPolygon([P(11, 3), P(5, 7.2), P(-1, 3), P(5, -1.2)], SHADOW);
+
+  // Wheels before the shell: the sills then cut across their upper half.
+  for (const a of [2.4, 7.6]) {
+    const [wx, wy] = P(a, 4.7, SILL);
+    c.fillRect(wx - 2, wy - 1, 5, 5, OUTLINE);
+    c.fillRect(wx - 3, wy, 7, 3, OUTLINE);
+    c.fillRect(wx - 1, wy + 1, 3, 1, shade(hex(PIXEL_PALETTE.metal), 0.6));
   }
 
-  // Lower body. Plan corners, nose first, going round the near side.
-  const noseFar = [6.4, 0.8] as const;
-  const noseMid = [7, 1.9] as const;
-  const noseNear = [7, 3.1] as const;
-  const frontNear = [6.4, 4.2] as const;
-  const rearNear = [0.6, 4.2] as const;
-  const tailNear = [0, 3.1] as const;
-  const tailMid = [0, 1.9] as const;
-  const tailFar = [0.6, 0.8] as const;
-  const plan = [noseFar, noseMid, noseNear, frontNear, rearNear, tailNear, tailMid, tailFar];
-
-  face(frontNear, rearNear, 0, BODY, flank);
-  face(noseNear, frontNear, 0, BODY, shade(nose, 0.9));
-  face(noseMid, noseNear, 0, BODY, nose);
-  // The far chamfer faces away from the camera; painting it anyway put bright
-  // shards outside the silhouette.
-  // Sills: only the silhouette is outlined, never every wall, or the seams
-  // between adjacent panels show up as dark scratches across the bonnet.
-  outline([rearNear, frontNear, noseNear, noseMid], 0, BODY);
+  // Only the four walls that face the camera are painted; the others would
+  // spill colour outside the silhouette.
+  wall(0, 1, SILL, BELT, dark);
+  wall(1, 2, SILL, BELT, shade(dark, 1.12));
+  wall(2, 3, SILL, BELT, lit);
+  wall(3, 4, SILL, BELT, shade(lit, 0.88));
   c.fillPolygon(
-    plan.map(([a, b]) => P(a, b, BODY)),
-    roofTone,
+    plan.map(([a, b]) => P(a, b, BELT)),
+    shade(body, 1.32),
   );
-  for (let i = 0; i < plan.length; i += 1) {
-    const [pa, pb] = plan[i]!;
-    const [qa, qb] = plan[(i + 1) % plan.length]!;
-    const a = P(pa, pb, BODY);
-    const b = P(qa, qb, BODY);
-    c.line(a[0], a[1], b[0], b[1], OUTLINE);
+
+  // Glasshouse, painted on the shell: roof glazing, windscreen reflection, and
+  // a band of side windows down the near flank.
+  const glazing: Array<[number, number]> = [
+    [7.2, 1.8],
+    [7.2, 4.2],
+    [6.6, 4.6],
+    [3.4, 4.6],
+    [2.9, 4.2],
+    [2.9, 1.8],
+    [3.4, 1.4],
+    [6.6, 1.4],
+  ];
+  c.fillPolygon(
+    glazing.map(([a, b]) => P(a, b, BELT)),
+    glass,
+  );
+  c.fillPolygon(
+    [P(7.2, 1.8, BELT), P(7.2, 4.2, BELT), P(6.4, 4.2, BELT), P(6.4, 1.8, BELT)],
+    shade(glass, 1.7),
+  );
+  c.fillPolygon(
+    [P(6.9, 4.9, BELT), P(3.3, 4.9, BELT), P(3.3, 4.9, BELT - 3), P(6.9, 4.9, BELT - 3)],
+    shade(glass, 1.15),
+  );
+
+  const ring = (points: ReadonlyArray<readonly [number, number]>, lift: number) => {
+    for (let i = 0; i < points.length; i += 1) {
+      const [a1, b1] = points[i]!;
+      const [a2, b2] = points[(i + 1) % points.length]!;
+      const p = P(a1, b1, lift);
+      const q = P(a2, b2, lift);
+      c.line(p[0], p[1], q[0], q[1], OUTLINE);
+    }
+  };
+  ring(plan, BELT);
+  ring(glazing, BELT);
+  // Sills and the two vertical edges that bound the visible silhouette.
+  for (const [i, j] of [
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 4],
+  ] as const) {
+    const [a1, b1] = plan[i]!;
+    const [a2, b2] = plan[j]!;
+    const p = P(a1, b1, SILL);
+    const q = P(a2, b2, SILL);
+    c.line(p[0], p[1], q[0], q[1], OUTLINE);
+  }
+  for (const i of [0, 4]) {
+    const [a, b] = plan[i]!;
+    const p = P(a, b, SILL);
+    const q = P(a, b, BELT);
+    c.line(p[0], p[1], q[0], q[1], OUTLINE);
   }
 
-  // Greenhouse, set back from the nose and inset from the sills.
-  const cabin = [
-    [4.6, 1.4],
-    [4.9, 2.0],
-    [4.9, 3.0],
-    [4.6, 3.6],
-    [2.1, 3.6],
-    [1.8, 3.0],
-    [1.8, 2.0],
-    [2.1, 1.4],
-  ] as const;
-  face(cabin[3]!, cabin[4]!, BODY, CABIN, glass);
-  face(cabin[2]!, cabin[3]!, BODY, CABIN, shade(glass, 1.25));
-  face(cabin[1]!, cabin[2]!, BODY, CABIN, shade(glass, 1.5));
-  outline([cabin[4]!, cabin[3]!, cabin[2]!, cabin[1]!], BODY, CABIN);
-  c.fillPolygon(
-    cabin.map(([a, b]) => P(a, b, CABIN)),
-    shade(glass, 0.8),
-  );
-  for (let i = 0; i < cabin.length; i += 1) {
-    const [pa, pb] = cabin[i]!;
-    const [qa, qb] = cabin[(i + 1) % cabin.length]!;
-    const a = P(pa, pb, CABIN);
-    const b = P(qa, qb, CABIN);
-    c.line(a[0], a[1], b[0], b[1], OUTLINE);
-  }
-
-  // Lamps, hung off the nose corners so they cannot drift off the panel.
-  const [hx, hy] = P(noseNear[0], noseNear[1], BODY);
-  c.fillRect(hx - 1, hy + 1, 2, 2, hex(PIXEL_PALETTE.windowLit));
-  const [tx, ty] = P(tailNear[0], tailNear[1], BODY);
-  c.fillRect(tx - 1, ty + 1, 2, 2, hex(PIXEL_PALETTE.roof));
+  const [hx, hy] = P(10, 3.7, BELT - 2);
+  c.fillRect(hx - 2, hy, 2, 2, hex(PIXEL_PALETTE.windowLit));
+  const [tx, ty] = P(0.2, 3.7, BELT - 2);
+  c.fillRect(tx, ty, 2, 2, hex(PIXEL_PALETTE.roof));
 
   save(
     {
@@ -1331,7 +1317,7 @@ function carSprite(id: string, body: RGBA, axis: "x" | "y"): void {
       file: `world/vehicles/${id}.png`,
       width: W,
       height: H,
-      anchor: { x: W / 2, y: oy + (len.y * 7 + wid.y * 5) / 2 },
+      anchor: { x: W / 2, y: oy + (len.y * LEN + wid.y * WID) / 2 },
       footprint: { w: 1, h: 1 },
     },
     c,
