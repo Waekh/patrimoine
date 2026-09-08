@@ -108,19 +108,42 @@ Les tuiles de sol ne sont jamais un aplat : herbe mouchetée en trois verts,
 crêtes d'eau suivant la pente 2:1, enrobé grenu bordé d'une bordure claire sur
 les deux arêtes hautes.
 
-## 7. Niveaux
+Chaque bâtiment porte une entrée lisible au rez-de-chaussée, quelle que soit sa
+hauteur : baie en retrait, vantaux sombres à imposte éclairée, auvent et deux
+marches. Les vantaux prennent une teinte sombre qui leur est propre et non une
+teinte dérivée du mur, sans quoi la porte d'une tour de verre disparaîtrait dans
+sa façade.
+
+## 7. Texte dans le monde
+
+Le texte affiché dans la scène passe par une police bitmap 5x7 (`font_5x7`) et
+jamais par une police système, qui serait lissée au milieu de pixels nets.
+
+- Les métriques et l'ordre des caractères vivent dans `src/config/pixel-font.ts`,
+  lu à la fois par le générateur, qui dessine l'atlas, et par le moteur, qui y
+  découpe les glyphes. Les deux ne peuvent donc pas diverger.
+- Le jeu de caractères est volontairement réduit : capitales, chiffres,
+  ponctuation courante et les accents du français. Les libellés sont mis en
+  capitales et les caractères inconnus deviennent des espaces.
+- Chaque bâtiment porte un panneau planté devant lui, décalé vers la face droite
+  pour ne pas masquer la porte. Le libellé de l'actif y est réparti sur deux
+  lignes, coupé par un point final s'il dépasse encore.
+- Les trois tuiles devant un bâtiment sont réservées : un arbre planté là
+  passerait devant le panneau et masquerait le texte.
+
+## 8. Niveaux
 
 Un bâtiment de niveau supérieur est plus haut et/ou plus large, jamais d'un
 autre style. Les niveaux 1 à 5 partagent la même base et la même palette.
 
-## 8. Placeholders
+## 9. Placeholders
 
 Les sprites actuels sont **générés par script** (`scripts/generate-placeholder-assets.ts`)
 et portent `"placeholder": true` dans le manifest. Ils respectent la
 projection, l'échelle, la palette et l'ancrage, et servent de gabarit pour les
 assets finaux. Un placeholder n'est jamais présenté comme un asset final.
 
-## 9. Manifest (`public/assets/asset-manifest.json`)
+## 10. Manifest (`public/assets/asset-manifest.json`)
 
 ```json
 {

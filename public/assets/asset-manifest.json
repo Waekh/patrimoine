@@ -843,14 +843,74 @@
       "type": "decoration",
       "file": "world/decorations/park_lv1.png",
       "width": 64,
-      "height": 48,
+      "height": 66,
       "anchor": {
         "x": 32,
-        "y": 32
+        "y": 49
       },
       "footprint": {
         "w": 1,
         "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "pond_lv1",
+      "type": "decoration",
+      "file": "world/decorations/pond_lv1.png",
+      "width": 64,
+      "height": 48,
+      "anchor": {
+        "x": 32,
+        "y": 31
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "fish_basic",
+      "type": "nature",
+      "file": "world/nature/fish_basic.png",
+      "width": 12,
+      "height": 8,
+      "anchor": {
+        "x": 6,
+        "y": 4
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "sign_board",
+      "type": "ui",
+      "file": "ui/sign_board.png",
+      "width": 82,
+      "height": 40,
+      "anchor": {
+        "x": 41,
+        "y": 37
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "font_5x7",
+      "type": "ui",
+      "file": "ui/font_5x7.png",
+      "width": 96,
+      "height": 32,
+      "anchor": {
+        "x": 0,
+        "y": 0
       },
       "placeholder": true
     },

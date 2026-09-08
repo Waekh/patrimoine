@@ -15,6 +15,17 @@ import {
   outlineDiamond,
 } from "./lib/iso";
 import { createSeededRandom, seedFromString } from "../src/services/world/seeded-random";
+import {
+  SIGN_BASE_Y,
+  SIGN_BOARD_H,
+  SIGN_BOARD_W,
+  SIGN_BOARD_X,
+  SIGN_BOARD_Y,
+  SIGN_H,
+  SIGN_POST_H,
+  SIGN_W,
+} from "../src/config/pixel-font";
+import { buildFontAtlas } from "./lib/font";
 
 /**
  * Generates PLACEHOLDER pixel-art sprites that respect the Pixel Art Bible
@@ -471,28 +482,113 @@ function drawRivets(c: PixelCanvas, box: IsoBox): void {
   }
 }
 
+/**
+ * Ground-floor doorway, sized off the building so it stays legible on a tower:
+ * recessed opening, glazed leaves with a mullion, lit transom, projecting
+ * canopy and a couple of steps. Drawn on the left (front) face.
+ */
+function drawDoorway(
+  c: PixelCanvas,
+  box: IsoBox,
+  style: BuildingStyle,
+  centre: number,
+  options: { halfWidth?: number; height?: number } = {},
+): void {
+  const half = options.halfWidth ?? (faceSteps(box) >= 24 ? 4 : 3);
+  const tall = Math.min(options.height ?? 15, Math.max(9, box.height - 6));
+  const u = centre - half;
+  const span = half * 2 + 1;
+  const trim = hex(style.trim);
+  // The leaves take a dark tone of their own rather than one derived from the
+  // wall: on a glass tower a glass-coloured door would vanish into the facade.
+  const jamb = hex(PIXEL_PALETTE.outline);
+  const leaf = hex(PIXEL_PALETTE.windowDark);
+  const concrete = hex(PIXEL_PALETTE.concrete);
+
+  // Reveal, a bright surround, then the door leaves inside it.
+  fillFaceRect(c, box, "left", u - 1, 1, span + 2, tall + 1, shade(trim, 1.2));
+  fillFaceRect(c, box, "left", u, 1, span, tall, jamb);
+  fillFaceRect(c, box, "left", u + 1, 2, span - 2, tall - 4, leaf);
+  fillFaceRect(c, box, "left", u + 1, 2, span - 2, tall - 4, shade(leaf, 1.35), { every: 3 });
+  // Mullion between the two leaves, and a handle on each.
+  fillFaceRect(c, box, "left", centre, 2, 1, tall - 4, shade(trim, 1.05));
+  fillFaceRect(c, box, "left", centre - 1, Math.floor(tall / 2) - 1, 1, 1, hex(PIXEL_PALETTE.gold));
+  fillFaceRect(c, box, "left", centre + 1, Math.floor(tall / 2) - 1, 1, 1, hex(PIXEL_PALETTE.gold));
+  // Lit transom above the leaves, then the lintel.
+  fillFaceRect(c, box, "left", u + 1, tall - 2, span - 2, 2, hex(PIXEL_PALETTE.windowLit));
+  fillFaceRect(c, box, "left", u, tall, span, 1, trim);
+  // Canopy: one course wider than the opening, with a shaded underside.
+  fillFaceRect(c, box, "left", u - 1, tall + 1, span + 2, 1, shade(trim, 1.15));
+  fillFaceRect(c, box, "left", u - 1, tall + 2, span + 2, 1, shade(trim, 0.78));
+  // Two steps down to the pavement.
+  fillFaceRect(c, box, "left", u - 1, 0, span + 2, 1, concrete);
+  fillFaceRect(c, box, "left", u, 1, span, 1, shade(concrete, 0.88));
+}
+
 function drawEntrance(c: PixelCanvas, box: IsoBox, style: BuildingStyle): void {
   const steps = faceSteps(box);
   const centre = Math.floor(steps / 2);
   const trim = hex(style.trim);
   switch (style.entrance) {
     case "door": {
-      const wood = hex(PIXEL_PALETTE.wood);
-      fillFaceRect(c, box, "left", centre - 1, 2, 3, 8, shade(wood, 0.9));
-      fillFaceRect(c, box, "left", centre - 1, 9, 3, 1, trim);
-      fillFaceRect(c, box, "left", centre, 6, 1, 1, hex(PIXEL_PALETTE.gold));
-      fillFaceRect(c, box, "left", centre - 2, 1, 5, 1, hex(PIXEL_PALETTE.concrete));
+      // A house keeps a modest timber door; a block of flats gets a real porch.
+      if (box.height <= 30) {
+        const wood = hex(PIXEL_PALETTE.wood);
+        fillFaceRect(c, box, "left", centre - 2, 1, 5, 10, shade(wood, 0.72));
+        fillFaceRect(c, box, "left", centre - 1, 2, 3, 7, shade(wood, 0.95));
+        fillFaceRect(c, box, "left", centre - 1, 9, 3, 1, hex(PIXEL_PALETTE.windowLit));
+        fillFaceRect(c, box, "left", centre + 1, 5, 1, 1, hex(PIXEL_PALETTE.gold));
+        fillFaceRect(c, box, "left", centre - 2, 11, 5, 1, trim);
+        fillFaceRect(c, box, "left", centre - 3, 12, 7, 1, shade(trim, 1.15));
+        fillFaceRect(c, box, "left", centre - 3, 0, 7, 1, hex(PIXEL_PALETTE.concrete));
+      } else {
+        drawDoorway(c, box, style, centre);
+      }
       break;
     }
     case "portal": {
       const stone = shade(hex(style.wall), 1.1);
-      fillFaceRect(c, box, "left", centre - 2, 2, 5, 12, shade(stone, 0.7));
-      fillFaceRect(c, box, "left", centre - 2, 13, 5, 1, trim);
-      fillFaceRect(c, box, "left", centre - 3, 14, 7, 1, trim);
-      // Pediment above the portal.
-      for (let k = 0; k < 3; k += 1) {
-        fillFaceRect(c, box, "left", centre - 2 + k, 15 + k, 5 - k * 2, 1, stone);
-      }
+      const half = steps >= 24 ? 4 : 3;
+      const span = half * 2 + 1;
+      const tall = Math.min(14, Math.max(9, box.height - 8));
+      // Recessed portal with a bronze door and a lit fanlight over it.
+      fillFaceRect(c, box, "left", centre - half, 1, span, tall, shade(stone, 0.62));
+      fillFaceRect(
+        c,
+        box,
+        "left",
+        centre - half + 1,
+        2,
+        span - 2,
+        tall - 4,
+        hex(PIXEL_PALETTE.wood),
+      );
+      fillFaceRect(c, box, "left", centre, 2, 1, tall - 4, shade(trim, 1.1));
+      fillFaceRect(
+        c,
+        box,
+        "left",
+        centre - half + 1,
+        tall - 2,
+        span - 2,
+        2,
+        hex(PIXEL_PALETTE.windowLit),
+      );
+      fillFaceRect(c, box, "left", centre - half, tall, span, 1, trim);
+      fillFaceRect(c, box, "left", centre - half - 1, tall + 1, span + 2, 1, trim);
+      // Pediment above the portal, and steps below it.
+      for (let k = 0; k < half; k += 1)
+        fillFaceRect(
+          c,
+          box,
+          "left",
+          centre - half + 1 + k,
+          tall + 2 + k,
+          span - 2 - k * 2,
+          1,
+          stone,
+        );
+      fillFaceRect(c, box, "left", centre - half - 1, 0, span + 2, 1, hex(PIXEL_PALETTE.concrete));
       break;
     }
     case "shutter": {
@@ -546,14 +642,18 @@ function drawEntrance(c: PixelCanvas, box: IsoBox, style: BuildingStyle): void {
     case "shopfront": {
       const pane = hex(style.glass ?? PIXEL_PALETTE.glassPane);
       const awning = hex(PIXEL_PALETTE.awning);
+      // Glazed ground floor with mullions, capped by a canvas awning...
       for (const face of ["left", "right"] as const) {
-        fillFaceRect(c, box, face, 1, 2, steps - 2, 7, shade(pane, face === "left" ? 0.9 : 0.76));
-        fillFaceRect(c, box, face, 1, 2, steps - 2, 7, shade(pane, face === "left" ? 1.05 : 0.9), {
+        fillFaceRect(c, box, face, 1, 2, steps - 2, 9, shade(pane, face === "left" ? 0.9 : 0.76));
+        fillFaceRect(c, box, face, 1, 2, steps - 2, 9, shade(pane, face === "left" ? 1.05 : 0.9), {
           every: 3,
         });
-        fillFaceRect(c, box, face, 1, 9, steps - 2, 2, shade(awning, face === "left" ? 1 : 0.82));
-        fillFaceRect(c, box, face, 1, 9, steps - 2, 2, shade(awning, 1.35), { every: 2 });
+        fillFaceRect(c, box, face, 1, 11, steps - 2, 2, shade(awning, face === "left" ? 1 : 0.82));
+        fillFaceRect(c, box, face, 1, 11, steps - 2, 2, shade(awning, 1.35), { every: 2 });
+        fillFaceRect(c, box, face, 1, 1, steps - 2, 1, hex(PIXEL_PALETTE.concrete));
       }
+      // ...and a proper entrance punched through the middle of the shopfront.
+      drawDoorway(c, box, style, centre, { height: 13 });
       break;
     }
   }
@@ -809,23 +909,232 @@ function generateNature(): void {
   tree("tree_basic", 10, 9);
   tree("tree_small", 7, 7);
 
-  const park = new PixelCanvas(TILE_W, TILE_H + 16);
-  drawDiamond(park, 32, 32, TILE_W, TILE_H, hex(PIXEL_PALETTE.grassDark), OUTLINE);
-  park.fillRect(30, 26, 4, 1, hex(PIXEL_PALETTE.roadLine));
-  park.fillRect(26, 34, 12, 1, hex(PIXEL_PALETTE.roadLine));
-  drawCanopy(park, 22, 22, 7, 5, hex(PIXEL_PALETTE.leaf));
-  drawCanopy(park, 44, 26, 6, 4, hex(PIXEL_PALETTE.leaf));
+  generatePark();
+  generatePond();
+}
+
+/**
+ * The park used to be a flat green diamond with two blobs on it, unreadable at
+ * world scale. It now reads as a square: gravel path crossing it, hedge border,
+ * benches, a lamp post, flower beds and two shade trees.
+ */
+function generatePark(): void {
+  const H = TILE_H + 34;
+  const c = new PixelCanvas(TILE_W, H);
+  const cy = H - TILE_H / 2 - 1;
+  const lawn = hex(PIXEL_PALETTE.grass);
+  const gravel = hex(PIXEL_PALETTE.concrete);
+  const hedge = hex(PIXEL_PALETTE.leafDark);
+  const random = createSeededRandom(seedFromString("park_lv1"));
+
+  drawDiamond(c, 32, cy, TILE_W, TILE_H, lawn, OUTLINE);
+  // Mown stripes: the same 2:1 slope as everything else.
+  const plot: IsoBox = { cx: 32, baseY: cy, w: TILE_W, h: TILE_H, height: 0 };
+  for (let u = 1; u < faceSteps(plot); u += 2)
+    fillFaceRect(c, plot, "left", u, 0, 1, 1, shade(lawn, 0.92));
+  // Gravel cross through the middle of the square. A path along a grid axis
+  // moves 2 px across for 1 px down, so it reaches the tile edge at |i| = 8:
+  // going further would spill the path outside the diamond.
+  const reach = TILE_H / 2 - 9;
+  for (let i = -reach; i <= reach; i += 1) {
+    for (const dx of [i * 2, -i * 2]) {
+      c.fillRect(32 + dx - 2, cy + i, 4, 1, gravel);
+      c.fillRect(32 + dx - 2, cy + i, 1, 1, shade(gravel, 0.86));
+    }
+  }
+  // Clipped hedge along the two rear edges.
+  for (let i = 0; i < TILE_W / 2 - 2; i += 2) {
+    c.fillRect(32 - i, cy - TILE_H / 2 + i / 2 + 1, 2, 3, hedge);
+    c.fillRect(30 + i, cy - TILE_H / 2 + i / 2 + 1, 2, 3, shade(hedge, 0.85));
+  }
+  // Flower beds: three tones so they read as colour, not noise.
+  for (const [bx, by] of [
+    [20, cy + 4],
+    [46, cy + 2],
+  ] as const) {
+    fillDiamond(c, bx, by, 12, 6, hex(PIXEL_PALETTE.wood));
+    fillDiamond(c, bx, by, 9, 4, hex(PIXEL_PALETTE.leaf));
+    for (let k = 0; k < 6; k += 1) {
+      const petal = [PIXEL_PALETTE.gold, PIXEL_PALETTE.roof, PIXEL_PALETTE.roadLine][k % 3]!;
+      c.fillRect(
+        bx - 3 + Math.floor(random() * 7),
+        by - 1 + Math.floor(random() * 3),
+        1,
+        1,
+        hex(petal),
+      );
+    }
+  }
+  // Two benches facing the path.
+  for (const [bx, by, flip] of [
+    [21, cy - 4, 1],
+    [40, cy + 7, -1],
+  ] as const) {
+    const seat = hex(PIXEL_PALETTE.wood);
+    for (let i = 0; i < 3; i += 1) {
+      c.fillRect(bx + i * 2 * flip, by + i * flip, 2, 1, seat);
+      c.fillRect(bx + i * 2 * flip, by - 3 + i * flip, 2, 2, shade(seat, 1.15));
+    }
+    c.fillRect(bx, by + 1, 1, 2, OUTLINE);
+    c.fillRect(bx + 4 * flip, by + 1 + 2 * flip, 1, 2, OUTLINE);
+  }
+  // Lamp post at the crossing of the paths.
+  c.fillRect(32, cy - 13, 1, 13, hex(PIXEL_PALETTE.metalDark));
+  c.fillRect(30, cy - 16, 4, 3, hex(PIXEL_PALETTE.metalDark));
+  c.fillRect(31, cy - 15, 2, 2, hex(PIXEL_PALETTE.windowLit));
+  drawCanopy(c, 15, cy - 12, 8, 6, hex(PIXEL_PALETTE.leaf));
+  c.fillRect(15, cy - 8, 2, 8, hex(PIXEL_PALETTE.wood));
+  drawCanopy(c, 50, cy - 8, 7, 5, hex(PIXEL_PALETTE.leaf));
+  c.fillRect(50, cy - 5, 2, 6, hex(PIXEL_PALETTE.wood));
   save(
     {
       id: "park_lv1",
       type: "decoration",
       file: "world/decorations/park_lv1.png",
       width: TILE_W,
-      height: TILE_H + 16,
-      anchor: { x: 32, y: 32 },
+      height: H,
+      anchor: { x: 32, y: cy },
       footprint: { w: 1, h: 1 },
     },
-    park,
+    c,
+  );
+}
+
+/** Pond that fills an empty stretch of lawn: banked edge, reeds, lily pads. */
+function generatePond(): void {
+  const H = TILE_H + 16;
+  const c = new PixelCanvas(TILE_W, H);
+  const cy = H - TILE_H / 2 - 1;
+  const bank = hex(PIXEL_PALETTE.wood);
+  const water = hex(PIXEL_PALETTE.water);
+  const deep = hex(PIXEL_PALETTE.waterDark);
+  const random = createSeededRandom(seedFromString("pond_lv1"));
+
+  drawDiamond(c, 32, cy, TILE_W, TILE_H, hex(PIXEL_PALETTE.grass), OUTLINE);
+  fillDiamond(c, 32, cy, TILE_W - 8, TILE_H - 4, shade(bank, 1.1));
+  fillDiamond(c, 32, cy, TILE_W - 14, TILE_H - 7, water);
+  outlineDiamond(c, 32, cy, TILE_W - 14, TILE_H - 7, shade(deep, 0.9));
+  // Ripples, brightest where the light lands.
+  const surface: IsoBox = { cx: 32, baseY: cy, w: TILE_W - 14, h: TILE_H - 7, height: 0 };
+  for (let u = 2; u < faceSteps(surface) - 1; u += 3)
+    fillFaceRect(c, surface, "left", u, 0, 2, 1, shade(water, 1.2));
+  for (let k = 0; k < 8; k += 1) {
+    const dy = Math.round((random() - 0.5) * (TILE_H - 14));
+    const span = Math.max(0, (TILE_W - 20) / 2 - Math.abs(dy) * 2);
+    const dx = Math.round((random() - 0.5) * span * 2);
+    c.fillRect(32 + dx, cy + dy, 2, 1, deep);
+  }
+  // Lily pads and reeds on the near bank.
+  for (const [px, py] of [
+    [24, cy + 3],
+    [41, cy - 2],
+  ] as const) {
+    fillDiamond(c, px, py, 7, 4, hex(PIXEL_PALETTE.leaf));
+    c.fillRect(px, py - 1, 1, 1, hex(PIXEL_PALETTE.roadLine));
+  }
+  for (const [rx, ry] of [
+    [12, cy + 2],
+    [15, cy + 4],
+    [52, cy - 1],
+  ] as const) {
+    c.fillRect(rx, ry - 7, 1, 7, hex(PIXEL_PALETTE.leafDark));
+    c.fillRect(rx, ry - 8, 1, 2, hex(PIXEL_PALETTE.wood));
+  }
+  save(
+    {
+      id: "pond_lv1",
+      type: "decoration",
+      file: "world/decorations/pond_lv1.png",
+      width: TILE_W,
+      height: H,
+      anchor: { x: 32, y: cy },
+      footprint: { w: 1, h: 1 },
+    },
+    c,
+  );
+}
+
+/** A fish, drawn swimming to the right; the renderer mirrors it to turn around. */
+function generateFish(): void {
+  const c = new PixelCanvas(12, 8);
+  const body = hex(PIXEL_PALETTE.gold);
+  const dark = shade(body, 0.78);
+  c.fillRect(3, 3, 6, 3, body);
+  c.fillRect(4, 2, 4, 1, body);
+  c.fillRect(4, 6, 4, 1, dark);
+  c.fillRect(3, 5, 6, 1, dark);
+  // Tail fin and eye.
+  c.fillRect(1, 2, 2, 1, body);
+  c.fillRect(1, 5, 2, 1, body);
+  c.fillRect(2, 3, 1, 2, dark);
+  c.fillRect(8, 3, 1, 1, OUTLINE);
+  save(
+    {
+      id: "fish_basic",
+      type: "nature",
+      file: "world/nature/fish_basic.png",
+      width: 12,
+      height: 8,
+      anchor: { x: 6, y: 4 },
+      footprint: { w: 1, h: 1 },
+    },
+    c,
+  );
+}
+
+/**
+ * Signpost planted in front of a building. The board is blank: the renderer
+ * blits the asset label onto it from the font atlas, since the text is data.
+ */
+function generateSign(): void {
+  const c = new PixelCanvas(SIGN_W, SIGN_H);
+  const post = hex(PIXEL_PALETTE.wood);
+  const board = hex(PIXEL_PALETTE.wall);
+  c.fillPolygon(
+    [
+      [SIGN_W / 2, SIGN_BASE_Y - 2],
+      [SIGN_W / 2 + 10, SIGN_BASE_Y + 2],
+      [SIGN_W / 2, SIGN_BASE_Y + 6],
+      [SIGN_W / 2 - 10, SIGN_BASE_Y + 2],
+    ],
+    SHADOW,
+  );
+  // Two posts, then the board they carry.
+  for (const dx of [-SIGN_BOARD_W / 2 + 3, SIGN_BOARD_W / 2 - 5] as const) {
+    c.fillRect(SIGN_W / 2 + dx, SIGN_BASE_Y - SIGN_POST_H, 2, SIGN_POST_H + 1, OUTLINE);
+    c.fillRect(SIGN_W / 2 + dx, SIGN_BASE_Y - SIGN_POST_H, 1, SIGN_POST_H, shade(post, 1.15));
+  }
+  c.fillRect(SIGN_BOARD_X - 1, SIGN_BOARD_Y - 1, SIGN_BOARD_W + 2, SIGN_BOARD_H + 2, OUTLINE);
+  c.fillRect(SIGN_BOARD_X, SIGN_BOARD_Y, SIGN_BOARD_W, SIGN_BOARD_H, board);
+  c.fillRect(SIGN_BOARD_X, SIGN_BOARD_Y, SIGN_BOARD_W, 1, shade(board, 1.12));
+  c.fillRect(SIGN_BOARD_X, SIGN_BOARD_Y + SIGN_BOARD_H - 1, SIGN_BOARD_W, 1, shade(board, 0.84));
+  save(
+    {
+      id: "sign_board",
+      type: "ui",
+      file: "ui/sign_board.png",
+      width: SIGN_W,
+      height: SIGN_H,
+      anchor: { x: SIGN_W / 2, y: SIGN_BASE_Y },
+      footprint: { w: 1, h: 1 },
+    },
+    c,
+  );
+}
+
+/** Glyph atlas for in-world signs; framed by index at render time. */
+function generateFont(): void {
+  const atlas = buildFontAtlas(hex(PIXEL_PALETTE.outline));
+  save(
+    {
+      id: "font_5x7",
+      type: "ui",
+      file: "ui/font_5x7.png",
+      width: atlas.width,
+      height: atlas.height,
+      anchor: { x: 0, y: 0 },
+    },
+    atlas,
   );
 }
 
@@ -906,6 +1215,9 @@ function main(): void {
   for (const [kind, style] of Object.entries(STYLES))
     for (let level = 1; level <= 5; level += 1) generateBuilding(kind, style, level);
   generateNature();
+  generateFish();
+  generateSign();
+  generateFont();
   generateCharacter();
   generateEffects();
   const manifest = {

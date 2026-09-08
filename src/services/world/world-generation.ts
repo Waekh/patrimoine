@@ -38,6 +38,7 @@ export function generateWorldState(input: GenerateWorldInput): WorldState {
     terrain: layout.terrain,
     buildings: layout.buildings,
     decorations: layout.decorations,
+    fish: layout.fish,
     characters: layout.characters,
     districts: layout.districts,
     resources: {

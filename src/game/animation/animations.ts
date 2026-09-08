@@ -1,6 +1,7 @@
-import type { BuildingNode, CharacterNode } from "@/game/rendering/scene-builder";
+import type { BuildingNode, CharacterNode, FishNode } from "@/game/rendering/scene-builder";
 import { gridToScreen, type IsoGridConfig } from "@/game/map/iso";
 import { zIndexOf } from "@/services/world/world-layout";
+import type { GridPosition } from "@/types/world";
 
 export interface TimedAnimation {
   /** Returns false when finished. */
@@ -56,7 +57,40 @@ export function createUpgradeAnimation(node: BuildingNode): TimedAnimation {
   };
 }
 
-/** Characters walk back and forth along their path; disabled with reduced motion. */
+/** Milliseconds spent walking one tile. */
+const WALK_MS_PER_TILE = 900;
+/** Fade in and out through the doorway, so nobody pops in or out of existence. */
+const DOOR_FADE_MS = 260;
+
+function pathLength(from: GridPosition, to: GridPosition): number {
+  return Math.abs(to.x - from.x) + Math.abs(to.y - from.y) || 1;
+}
+
+/**
+ * Walk in, stay inside, walk back out, wait, repeat. `elapsedMs` runs freely
+ * and the phase is derived from it, so a character can be added or removed
+ * without disturbing the others.
+ */
+function characterPhase(node: CharacterNode, walkMs: number): { progress: number; alpha: number } {
+  const { insideMs } = node.character;
+  const waitMs = 1200;
+  const cycle = walkMs * 2 + insideMs + waitMs;
+  const t = node.elapsedMs % cycle;
+  if (t < walkMs) {
+    // Walking towards the door, fading out over the last steps.
+    const remaining = walkMs - t;
+    return { progress: t / walkMs, alpha: Math.min(1, remaining / DOOR_FADE_MS) };
+  }
+  if (t < walkMs + insideMs) return { progress: 1, alpha: 0 };
+  const out = t - walkMs - insideMs;
+  if (out < walkMs) {
+    // Coming back out, fading in as it clears the doorway.
+    return { progress: 1 - out / walkMs, alpha: Math.min(1, out / DOOR_FADE_MS) };
+  }
+  return { progress: 0, alpha: 1 };
+}
+
+/** Characters walk their path; disabled with reduced motion. */
 export function updateCharacters(
   characters: CharacterNode[],
   deltaMs: number,
@@ -65,18 +99,46 @@ export function updateCharacters(
   for (const node of characters) {
     const [from, to] = node.character.path;
     if (!from || !to) continue;
-    const length = Math.abs(to.x - from.x) + Math.abs(to.y - from.y) || 1;
-    node.t += (node.direction * deltaMs) / (length * 900);
-    if (node.t >= 1) {
-      node.t = 1;
-      node.direction = -1;
-    } else if (node.t <= 0) {
-      node.t = 0;
-      node.direction = 1;
+    node.elapsedMs += deltaMs;
+    const walkMs = pathLength(from, to) * WALK_MS_PER_TILE;
+    let progress: number;
+    let alpha = 1;
+    if (node.character.entersBuildingId) {
+      ({ progress, alpha } = characterPhase(node, walkMs));
+    } else {
+      // Street wanderer: a plain ping-pong along the road.
+      const cycle = walkMs * 2;
+      const t = node.elapsedMs % cycle;
+      progress = t < walkMs ? t / walkMs : 2 - t / walkMs;
     }
-    const pos = { x: from.x + (to.x - from.x) * node.t, y: from.y + (to.y - from.y) * node.t };
+    node.sprite.alpha = alpha;
+    node.sprite.visible = alpha > 0;
+    if (alpha === 0) continue;
+    const pos = {
+      x: from.x + (to.x - from.x) * progress,
+      y: from.y + (to.y - from.y) * progress,
+    };
     const { x, y } = gridToScreen(pos, grid);
     node.sprite.position.set(Math.round(x), Math.round(y));
     node.sprite.zIndex = zIndexOf({ x: Math.round(pos.x), y: Math.round(pos.y) }) + 1;
+  }
+}
+
+/** Fish drift back and forth inside their pond, flipping to face the way they swim. */
+export function updateFish(fish: FishNode[], deltaMs: number, grid: IsoGridConfig): void {
+  for (const node of fish) {
+    node.elapsedMs += deltaMs;
+    const cycle = node.fish.periodMs * 2;
+    const t = node.elapsedMs % cycle;
+    const forward = t < node.fish.periodMs;
+    const progress = forward ? t / node.fish.periodMs : 2 - t / node.fish.periodMs;
+    const { from, to } = node.fish;
+    const pos = {
+      x: node.fish.position.x + from.x + (to.x - from.x) * progress,
+      y: node.fish.position.y + from.y + (to.y - from.y) * progress,
+    };
+    const { x, y } = gridToScreen(pos, grid);
+    node.sprite.position.set(Math.round(x), Math.round(y));
+    node.sprite.scale.x = forward ? 1 : -1;
   }
 }

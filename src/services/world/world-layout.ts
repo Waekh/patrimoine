@@ -7,6 +7,7 @@ import type {
   WorldCharacter,
   WorldDecoration,
   WorldEntity,
+  WorldFish,
   WorldTerrainTile,
 } from "@/types/world";
 import { createSeededRandom } from "./seeded-random";
@@ -15,6 +16,7 @@ export interface LayoutResult {
   terrain: WorldTerrainTile[];
   buildings: WorldBuilding[];
   decorations: WorldDecoration[];
+  fish: WorldFish[];
   characters: WorldCharacter[];
   districts: DistrictArea[];
   /** Entities that did not fit in their district (world too small). */
@@ -208,6 +210,23 @@ function placeEntities(
   return { buildings, unplaced, counts };
 }
 
+/**
+ * Keeps the three tiles in front of a building clear. That is where the sign
+ * stands, and a tree planted there sorts in front of it and hides the label.
+ */
+function reserveSignClearance(buildings: readonly WorldBuilding[], occupancy: Occupancy): void {
+  for (const building of buildings) {
+    const fx = building.position.x + building.footprint.w - 1;
+    const fy = building.position.y + building.footprint.h - 1;
+    for (const [dx, dy] of [
+      [1, 0],
+      [0, 1],
+      [1, 1],
+    ] as const)
+      if (occupancy.isFree(fx + dx, fy + dy)) occupancy.occupy(fx + dx, fy + dy, 1, 1);
+  }
+}
+
 function placeDecorations(
   mapSize: number,
   rects: Record<DistrictId, Rect>,
@@ -216,6 +235,31 @@ function placeDecorations(
   cityLevel: number,
 ) {
   const decorations: WorldDecoration[] = [];
+  const fish: WorldFish[] = [];
+  // Ponds first: they need room, and they break up the large empty lawns that
+  // otherwise fill a map whose owner holds only a handful of assets.
+  for (const pond of pondPositions(mapSize, occupancy, random)) {
+    decorations.push({
+      id: `pond_${pond.x}_${pond.y}`,
+      kind: "POND",
+      position: pond,
+      spriteId: SPRITE_IDS.pond,
+    });
+    occupancy.occupy(pond.x, pond.y, 1, 1);
+    const shoal = 1 + Math.floor(random() * 2);
+    for (let k = 0; k < shoal; k += 1) {
+      // Offsets stay well inside the tile so a fish never swims onto the bank.
+      const from = { x: -0.22 - random() * 0.1, y: -0.1 + random() * 0.2 };
+      fish.push({
+        id: `fish_${pond.x}_${pond.y}_${k}`,
+        position: pond,
+        spriteId: SPRITE_IDS.fish,
+        from,
+        to: { x: -from.x, y: -from.y },
+        periodMs: 2600 + Math.floor(random() * 2200),
+      });
+    }
+  }
   const density = 0.12 + Math.min(0.2, cityLevel * 0.02);
   for (let y = 0; y < mapSize; y += 1) {
     for (let x = 0; x < mapSize; x += 1) {
@@ -243,13 +287,72 @@ function placeDecorations(
     });
     occupancy.occupy(px, py, 1, 1);
   }
-  return decorations;
+  return { decorations, fish };
 }
 
-function placeCharacters(mapSize: number, random: () => number, count: number): WorldCharacter[] {
+/**
+ * Ponds go where the lawn is emptiest: a tile is eligible when its whole 3x3
+ * neighbourhood is free, which keeps water away from buildings and roads.
+ * Candidates are scanned on a coarse grid and spaced out, so a big map gets
+ * several small ponds rather than one cluster.
+ */
+function pondPositions(
+  mapSize: number,
+  occupancy: Occupancy,
+  random: () => number,
+): GridPosition[] {
+  const chosen: GridPosition[] = [];
+  const maxPonds = Math.max(1, Math.floor(mapSize / 10));
+  const spacing = Math.max(6, Math.floor(mapSize / 5));
+  for (let y = 2; y < mapSize - 2 && chosen.length < maxPonds; y += 2) {
+    for (let x = 2; x < mapSize - 2 && chosen.length < maxPonds; x += 2) {
+      if (!occupancy.areaFree(x - 1, y - 1, 3, 3)) continue;
+      if (chosen.some((p) => Math.abs(p.x - x) < spacing && Math.abs(p.y - y) < spacing)) continue;
+      if (random() < 0.45) continue;
+      chosen.push({ x, y });
+    }
+  }
+  return chosen;
+}
+
+/**
+ * Each character walks from the street to the door of one building, goes in,
+ * and comes back out. The door is the front corner of the footprint, which is
+ * where the entrance is drawn on the sprite.
+ */
+function doorOf(building: WorldBuilding): GridPosition {
+  return {
+    x: building.position.x + (building.footprint.w - 1) / 2,
+    y: building.position.y + building.footprint.h - 0.5,
+  };
+}
+
+function placeCharacters(
+  mapSize: number,
+  buildings: readonly WorldBuilding[],
+  random: () => number,
+  count: number,
+): WorldCharacter[] {
   const road = Math.floor(mapSize / 2);
   const characters: WorldCharacter[] = [];
   for (let i = 0; i < count; i += 1) {
+    const target = buildings[Math.floor(random() * buildings.length)];
+    if (target) {
+      const door = doorOf(target);
+      // Start a couple of tiles out in front, on the pavement side.
+      const from = { x: door.x, y: Math.min(mapSize - 1, door.y + 2) };
+      characters.push({
+        id: `character_${i}`,
+        position: from,
+        spriteId: SPRITE_IDS.characterBasic,
+        path: [from, door],
+        entersBuildingId: target.id,
+        insideMs: 3000 + Math.floor(random() * 5000),
+        phaseMs: Math.floor(random() * 6000),
+      });
+      continue;
+    }
+    // No buildings yet: the character just wanders the central roads.
     const horizontal = random() < 0.5;
     const start = Math.floor(random() * (mapSize - 2)) + 1;
     const end = Math.floor(random() * (mapSize - 2)) + 1;
@@ -260,6 +363,9 @@ function placeCharacters(mapSize: number, random: () => number, count: number): 
       position: from,
       spriteId: SPRITE_IDS.characterBasic,
       path: [from, to],
+      entersBuildingId: null,
+      insideMs: 0,
+      phaseMs: Math.floor(random() * 6000),
     });
   }
   return characters;
@@ -278,12 +384,14 @@ export function layoutWorld(
   const rects = computeDistrictRects(mapSize);
   const terrain = buildTerrain(mapSize, occupancy);
   const { buildings, unplaced, counts } = placeEntities(entities, rects, occupancy);
+  reserveSignClearance(buildings, occupancy);
   const random = createSeededRandom(seed);
-  const decorations = placeDecorations(mapSize, rects, occupancy, random, cityLevel);
+  const { decorations, fish } = placeDecorations(mapSize, rects, occupancy, random, cityLevel);
   const characters = placeCharacters(
     mapSize,
+    buildings,
     random,
-    Math.min(4, 1 + Math.floor(buildings.length / 2)),
+    Math.min(6, 1 + Math.floor(buildings.length / 2)),
   );
   const districts: DistrictArea[] = DISTRICT_IDS.map((id) => ({
     id,
@@ -291,7 +399,7 @@ export function layoutWorld(
     buildingCount: counts[id],
   }));
   validateLayout(mapSize, buildings, decorations, terrain);
-  return { terrain, buildings, decorations, characters, districts, unplaced };
+  return { terrain, buildings, decorations, fish, characters, districts, unplaced };
 }
 
 /** Throws when two footprints overlap or leave the map: a bug, never a runtime state. */

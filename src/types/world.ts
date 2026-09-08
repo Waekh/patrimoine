@@ -49,9 +49,22 @@ export interface WorldBuilding {
 
 export interface WorldDecoration {
   id: string;
-  kind: "TREE" | "PARK";
+  kind: "TREE" | "PARK" | "POND";
   position: GridPosition;
   spriteId: string;
+}
+
+/** A fish swimming inside a pond; purely decorative, never interactive. */
+export interface WorldFish {
+  id: string;
+  /** The pond tile it swims in. */
+  position: GridPosition;
+  spriteId: string;
+  /** Offsets from the tile centre, in tiles, between which the fish drifts. */
+  from: GridPosition;
+  to: GridPosition;
+  /** Seconds for one crossing, so shoals never swim in lockstep. */
+  periodMs: number;
 }
 
 export interface WorldCharacter {
@@ -60,6 +73,15 @@ export interface WorldCharacter {
   spriteId: string;
   /** Deterministic walking path (grid positions); empty when idle. */
   path: GridPosition[];
+  /**
+   * Building the character walks into. It disappears through the door, stays
+   * inside, then comes back out. Null when it just wanders the street.
+   */
+  entersBuildingId: string | null;
+  /** Milliseconds spent inside before coming back out. */
+  insideMs: number;
+  /** Milliseconds of offset in the cycle, so the crowd is not synchronised. */
+  phaseMs: number;
 }
 
 export interface WorldResources {
@@ -96,6 +118,7 @@ export interface WorldState {
   terrain: WorldTerrainTile[];
   buildings: WorldBuilding[];
   decorations: WorldDecoration[];
+  fish: WorldFish[];
   characters: WorldCharacter[];
   resources: WorldResources;
   camera: WorldCamera;

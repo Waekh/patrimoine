@@ -38,7 +38,11 @@ export const SPRITE_IDS = {
   treeBasic: "tree_basic",
   treeSmall: "tree_small",
   park: "park_lv1",
+  pond: "pond_lv1",
+  fish: "fish_basic",
   characterBasic: "character_basic",
   scaffold: "scaffold",
   selection: "selection_ring",
+  signBoard: "sign_board",
+  font: "font_5x7",
 } as const;

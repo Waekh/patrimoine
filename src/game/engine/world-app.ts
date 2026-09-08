@@ -5,6 +5,7 @@ import {
   createBuildAnimation,
   createUpgradeAnimation,
   updateCharacters,
+  updateFish,
   type TimedAnimation,
 } from "@/game/animation/animations";
 import { footprintCenter, type IsoGridConfig } from "@/game/map/iso";
@@ -227,6 +228,7 @@ export class WorldApp {
     if (this.animations.length) this.animations = this.animations.filter((a) => a.update(deltaMs));
     if (this.scene && !this.options.reducedMotion()) {
       updateCharacters(this.scene.characters, deltaMs, this.grid);
+      updateFish(this.scene.fish, deltaMs, this.grid);
       if (this.scene.selection.visible) {
         this.scene.selection.alpha = 0.7 + 0.3 * Math.sin(performance.now() / 250);
       }
