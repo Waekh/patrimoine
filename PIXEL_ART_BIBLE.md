@@ -29,6 +29,8 @@ règles n'entre pas dans le manifest.
 | Banque / financier | 64–128  | 96–128      | 1 × 1 à 2 × 2  |
 | Immeuble           | 64–128  | 96–160      | 1 × 1 à 2 × 2  |
 | Voiture            | 50–52   | 41–44       | 1 × 1          |
+| Buisson            | 24      | 20          | 1 × 1          |
+| Lampadaire         | 16      | 46          | 1 × 1          |
 
 Le point d'ancrage d'un sprite est le **centre du losange de base**
 (`anchor.x = largeur / 2`, `anchor.y = hauteur − 16` pour une emprise 1 × 1).
@@ -49,8 +51,11 @@ Le point d'ancrage d'un sprite est le **centre du losange de base**
 | `grass-dark`   | `#5f8d4e` | ombre terrain                 |
 | `water`        | `#4f8fc0` | eau                           |
 | `water-dark`   | `#3a6f9c` | eau profonde                  |
-| `road`         | `#9d9a92` | routes                        |
-| `road-line`    | `#e8e4d8` | marquage                      |
+| `road`         | `#585765` | enrobé                        |
+| `road-dark`    | `#43424e` | grain de l'enrobé             |
+| `road-line`    | `#e8e4d8` | marquage et passages piétons  |
+| `pavement`     | `#c6c3ba` | trottoirs                     |
+| `pavement-dark`| `#a5a299` | joints de dalles              |
 | `wall`         | `#e7d8bf` | murs maisons                  |
 | `wall-dark`    | `#c8b593` | murs côté ombre               |
 | `roof`         | `#b8433a` | toits maisons                 |
@@ -144,7 +149,27 @@ jamais par une police système, qui serait lissée au milieu de pixels nets.
 Un bâtiment de niveau supérieur est plus haut et/ou plus large, jamais d'un
 autre style. Les niveaux 1 à 5 partagent la même base et la même palette.
 
-## 9. Véhicules
+## 9. La rue
+
+Une rue fait deux cases de large — une chaussée par sens — et est bordée d'une
+case de **trottoir** de chaque côté. Le trottoir est du terrain : rien ne s'y
+construit, et les quartiers s'arrêtent avant lui. C'est ce qui donne aux
+bâtiments une façade sur rue au lieu d'une pelouse.
+
+Le marquage suit les axes du sol, jamais l'écran. La chaussée côté axe médian
+porte la ligne discontinue sur l'arête qu'elle partage avec la voie opposée :
+une seule des deux cases la dessine, sinon la ligne apparaît en double. L'autre
+arête porte la ligne continue du caniveau. Le carrefour lui-même ne porte aucun
+marquage — deux jeux de lignes qui se croisent ne se lisent plus.
+
+Les **passages piétons** occupent les quatre abords du carrefour, une case au
+delà de celui-ci. Leurs bandes sont parallèles à la circulation.
+
+Les **lampadaires** sont la seule décoration posée sur une case occupée : ils
+se tiennent sur le trottoir, tous les six pas. Les piétons marchent sur le
+trottoir, jamais sur l'enrobé.
+
+## 10. Véhicules
 
 Une voiture existe en **quatre orientations**, une par sens de circulation :
 `north` (vers le haut à droite), `east` (bas droite), `south` (bas gauche),
@@ -163,7 +188,7 @@ L'ancrage d'une voiture n'est pas la formule générale : c'est le point de
 contact au sol mesuré sur l'art de référence, ce qui garantit que les quatre
 orientations posent la voiture au même endroit de la tuile.
 
-## 10. Placeholders
+## 11. Placeholders
 
 Les sprites **générés par script** (`scripts/generate-placeholder-assets.ts`)
 portent `"placeholder": true` dans le manifest. Ils respectent la projection,
@@ -171,7 +196,7 @@ l'échelle, la palette et l'ancrage, et servent de gabarit pour les assets
 finaux. Un placeholder n'est jamais présenté comme un asset final. Les
 voitures, qui viennent d'un art de référence, portent `false`.
 
-## 11. Manifest (`public/assets/asset-manifest.json`)
+## 12. Manifest (`public/assets/asset-manifest.json`)
 
 ```json
 {

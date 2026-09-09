@@ -1,4 +1,4 @@
-import { Container, Polygon, Sprite } from "pixi.js";
+import { Container, Polygon, Sprite, type FederatedPointerEvent } from "pixi.js";
 import {
   GLYPH_HEIGHT,
   SIGN_BASE_Y,
@@ -76,7 +76,10 @@ export interface Scene {
 
 export interface SceneCallbacks {
   onBuildingTap: (buildingId: string) => void;
-  onBuildingHover: (buildingId: string | null) => void;
+  onBuildingHover: (
+    buildingId: string | null,
+    position: { x: number; y: number } | null,
+  ) => void;
   onGroundTap: () => void;
 }
 
@@ -236,8 +239,7 @@ function buildSign(
     e.stopPropagation();
     callbacks.onBuildingTap(building.id);
   });
-  container.on("pointerover", () => callbacks.onBuildingHover(building.id));
-  container.on("pointerout", () => callbacks.onBuildingHover(null));
+  bindHover(container, building.id, callbacks);
   // Front corner of the footprint, then a few pixels towards the viewer.
   const { x, y } = gridToScreen(front, grid);
   // Slightly towards the right-hand face, since the entrance is drawn on the
@@ -261,6 +263,21 @@ function buildSign(
   });
   // A board with no legible text is worse than no sign at all.
   return drawn > 0 ? container : null;
+}
+
+/**
+ * Reports the building under the pointer, and where the pointer is. Touch is
+ * left out on purpose: a tap already opens the full panel, and a tooltip under
+ * the finger would only hide what it describes.
+ */
+function bindHover(target: Container, buildingId: string, callbacks: SceneCallbacks): void {
+  const report = (e: FederatedPointerEvent) => {
+    if (e.pointerType !== "mouse") return;
+    callbacks.onBuildingHover(buildingId, { x: e.global.x, y: e.global.y });
+  };
+  target.on("pointerover", report);
+  target.on("pointermove", report);
+  target.on("pointerout", () => callbacks.onBuildingHover(null, null));
 }
 
 function buildBuilding(
@@ -291,8 +308,7 @@ function buildBuilding(
     e.stopPropagation();
     callbacks.onBuildingTap(building.id);
   });
-  sprite.on("pointerover", () => callbacks.onBuildingHover(building.id));
-  sprite.on("pointerout", () => callbacks.onBuildingHover(null));
+  bindHover(sprite, building.id, callbacks);
   return { building, container, sprite };
 }
 

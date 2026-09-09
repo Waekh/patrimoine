@@ -124,10 +124,20 @@ suite, avec une rue entre deux rangées. C'est ce qui fait lire un quartier comm
 un îlot plutôt que comme des bâtiments dispersés. Conséquence assumée : un
 bâtiment qui passe en emprise 2x2 décale ceux qui le suivent dans sa rangée.
 
+La rue centrale fait deux cases, bordées d'une case de trottoir de chaque côté
+(terrain `PAVEMENT`, inconstructible). Les quartiers s'arrêtent donc deux cases
+avant le milieu de la carte, et les bâtiments ont une façade sur trottoir. Le
+lampadaire est la seule décoration autorisée sur une case déjà occupée —
+`validateLayout` l'exclut explicitement — parce que le trottoir est justement
+sa place.
+
 Frontière React ↔ PixiJS : `WorldCanvas` (composant client) instancie `WorldApp`
 (classe PixiJS) et communique par un petit bus d'événements typé
 (`select`, `hover`, `camera`). Aucun DOM React dans PixiJS, aucun appel
-PixiJS ailleurs que dans `src/game`.
+PixiJS ailleurs que dans `src/game`. `hover` porte la position du pointeur en
+pixels : la bulle de survol se place là plutôt que sur le bâtiment, ce qui
+éviterait de reprojeter à chaque mouvement de caméra. Elle ne réagit qu'à la
+souris — au doigt, une bulle masquerait ce qu'elle décrit.
 
 ## 9. Données de marché
 

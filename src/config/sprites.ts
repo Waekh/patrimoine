@@ -35,11 +35,24 @@ export const PARK_FOOTPRINT: Footprint = { w: 2, h: 2 };
 export const SPRITE_IDS = {
   terrainGrass: "terrain_grass",
   terrainWater: "terrain_water",
-  roadNS: "road_ns",
-  roadEW: "road_ew",
+  terrainPavement: "terrain_pavement",
+  /**
+   * A street is two tiles wide, so each carriageway has its own tile: the
+   * "inner" one carries the dashed centre line on the edge it shares with the
+   * opposite lane, the "outer" one the solid kerb line. Drawing the centre line
+   * on one tile of the pair is what makes it continuous down the street.
+   */
+  roadNSInner: "road_ns_inner",
+  roadNSOuter: "road_ns_outer",
+  roadEWInner: "road_ew_inner",
+  roadEWOuter: "road_ew_outer",
+  roadNSCrossing: "road_ns_crossing",
+  roadEWCrossing: "road_ew_crossing",
   roadCross: "road_cross",
   treeBasic: "tree_basic",
   treeSmall: "tree_small",
+  bush: "bush_basic",
+  lamp: "lamp_post",
   park: "park_lv1",
   pond: "pond_lv1",
   fish: "fish_basic",

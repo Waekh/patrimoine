@@ -9,6 +9,7 @@ import { t } from "@/lib/i18n";
 import type { AssetWithDetails, Liability } from "@/types/domain";
 import type { WorldState } from "@/types/world";
 import { BuildingDetailPanel } from "./building-detail-panel";
+import { BuildingTooltip } from "./building-tooltip";
 import { BuildingList } from "./building-list";
 import { WorldCanvas, type WorldControls } from "./world-canvas";
 import { WorldHud } from "./world-hud";
@@ -44,6 +45,12 @@ export function WorldView({
   banner,
 }: WorldViewProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<{
+    id: string;
+    x: number;
+    y: number;
+    bounds: { width: number; height: number };
+  } | null>(null);
   const [controls, setControls] = useState<WorldControls | null>(null);
   const [listOpen, setListOpen] = useState(false);
   const [showSigns, setShowSigns] = useState(true);
@@ -60,6 +67,27 @@ export function WorldView({
     [liabilities, selected],
   );
   const sectionRef = useRef<HTMLElement>(null);
+  const hoveredBuilding = useMemo(
+    () => (hovered ? (world.buildings.find((b) => b.id === hovered.id) ?? null) : null),
+    [world, hovered],
+  );
+  // The scene is measured here, in the event handler: the bubble flips against
+  // the edge of the scene, and a ref cannot be read while rendering.
+  const onHover = useCallback(
+    (buildingId: string | null, position: { x: number; y: number } | null) => {
+      if (!buildingId || !position) {
+        setHovered(null);
+        return;
+      }
+      const scene = sectionRef.current;
+      setHovered({
+        id: buildingId,
+        ...position,
+        bounds: { width: scene?.clientWidth ?? 0, height: scene?.clientHeight ?? 0 },
+      });
+    },
+    [],
+  );
   // Mobile bottom sheet covers up to 60 % of the scene: focus the building in the visible band.
   const focusInsetBottom = useSyncExternalStore(
     subscribeViewport,
@@ -118,11 +146,20 @@ export function WorldView({
           manifest={manifest}
           selectedBuildingId={selectedId}
           onSelect={setSelectedId}
+          onHover={onHover}
           showSigns={showSigns}
           animateOnMount={animateOnMount}
           focusInsetBottom={focusInsetBottom}
           onReady={setControls}
         />
+        {hovered && hoveredBuilding ? (
+          <BuildingTooltip
+            building={hoveredBuilding}
+            x={hovered.x}
+            y={hovered.y}
+            bounds={hovered.bounds}
+          />
+        ) : null}
         <WorldHud
           resources={world.resources}
           controls={controls}

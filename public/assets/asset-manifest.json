@@ -39,9 +39,9 @@
       "placeholder": true
     },
     {
-      "id": "road_ns",
-      "type": "road",
-      "file": "world/roads/road_ns.png",
+      "id": "terrain_pavement",
+      "type": "terrain",
+      "file": "world/terrain/terrain_pavement.png",
       "width": 64,
       "height": 32,
       "anchor": {
@@ -55,9 +55,89 @@
       "placeholder": true
     },
     {
-      "id": "road_ew",
+      "id": "road_ns_inner",
       "type": "road",
-      "file": "world/roads/road_ew.png",
+      "file": "world/roads/road_ns_inner.png",
+      "width": 64,
+      "height": 32,
+      "anchor": {
+        "x": 32,
+        "y": 16
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "road_ns_outer",
+      "type": "road",
+      "file": "world/roads/road_ns_outer.png",
+      "width": 64,
+      "height": 32,
+      "anchor": {
+        "x": 32,
+        "y": 16
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "road_ew_inner",
+      "type": "road",
+      "file": "world/roads/road_ew_inner.png",
+      "width": 64,
+      "height": 32,
+      "anchor": {
+        "x": 32,
+        "y": 16
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "road_ew_outer",
+      "type": "road",
+      "file": "world/roads/road_ew_outer.png",
+      "width": 64,
+      "height": 32,
+      "anchor": {
+        "x": 32,
+        "y": 16
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "road_ns_crossing",
+      "type": "road",
+      "file": "world/roads/road_ns_crossing.png",
+      "width": 64,
+      "height": 32,
+      "anchor": {
+        "x": 32,
+        "y": 16
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "road_ew_crossing",
+      "type": "road",
+      "file": "world/roads/road_ew_crossing.png",
       "width": 64,
       "height": 32,
       "anchor": {
@@ -831,6 +911,38 @@
       "anchor": {
         "x": 16,
         "y": 40
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "bush_basic",
+      "type": "nature",
+      "file": "world/nature/bush_basic.png",
+      "width": 24,
+      "height": 20,
+      "anchor": {
+        "x": 12,
+        "y": 16
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "lamp_post",
+      "type": "decoration",
+      "file": "world/decorations/lamp_post.png",
+      "width": 16,
+      "height": 46,
+      "anchor": {
+        "x": 8,
+        "y": 43
       },
       "footprint": {
         "w": 1,

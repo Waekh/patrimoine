@@ -5,7 +5,6 @@ import {
   SPRITE_IDS,
   carSpriteId,
   headingBetween,
-  type CarHeading,
 } from "@/config/sprites";
 import type {
   DistrictArea,
@@ -74,8 +73,10 @@ class Occupancy {
  */
 export function computeDistrictRects(mapSize: number): Record<DistrictId, Rect> {
   const road = Math.floor(mapSize / 2);
-  const q = road - 1; // usable width of a quadrant, one tile margin from the roads
-  const east = road + 2;
+  // The street takes two tiles and the pavement one on each side, so a quadrant
+  // stops two tiles short of the middle.
+  const q = road - 2;
+  const east = road + 3;
   const seSplit = Math.floor(q / 2);
   return {
     HOME_DISTRICT: { x: 1, y: 1, w: q, h: q, anchorX: "end", anchorY: "end" },
@@ -107,23 +108,35 @@ export function computeDistrictRects(mapSize: number): Record<DistrictId, Rect> 
   };
 }
 
+/**
+ * The streets and everything that lines them.
+ *
+ * A street is two tiles wide and is bordered on both sides by a tile of
+ * pavement, which is what separates the asphalt from the lawns and gives the
+ * buildings a frontage to stand on. The pavement is terrain, not decoration:
+ * nothing can be built on it, and the district rectangles stop short of it.
+ *
+ * Zebra crossings sit on the four approaches to the junction — the tiles that
+ * face the pavement corners — which is where a pedestrian would actually cross.
+ */
 function buildTerrain(mapSize: number, occupancy: Occupancy): WorldTerrainTile[] {
   const road = Math.floor(mapSize / 2);
   const tiles: WorldTerrainTile[] = [];
   // Small pond in the south-west corner: purely decorative, never buildable.
   const pond = { x: 1, y: mapSize - 4, w: 3, h: 3 };
+  const onStreetX = (x: number) => x === road || x === road + 1;
+  const onStreetY = (y: number) => y === road || y === road + 1;
+  const onPavement = (v: number) => v === road - 1 || v === road + 2;
+
   for (let y = 0; y < mapSize; y += 1) {
     for (let x = 0; x < mapSize; x += 1) {
-      const onRoadX = x === road || x === road + 1;
-      const onRoadY = y === road || y === road + 1;
-      if (onRoadX || onRoadY) {
-        const spriteId =
-          onRoadX && onRoadY
-            ? SPRITE_IDS.roadCross
-            : onRoadX
-              ? SPRITE_IDS.roadNS
-              : SPRITE_IDS.roadEW;
-        tiles.push({ x, y, kind: "ROAD", spriteId });
+      const streetX = onStreetX(x);
+      const streetY = onStreetY(y);
+      if (streetX || streetY) {
+        tiles.push({ x, y, kind: "ROAD", spriteId: roadSpriteId(x, y, road) });
+        occupancy.occupy(x, y, 1, 1);
+      } else if (onPavement(x) || onPavement(y)) {
+        tiles.push({ x, y, kind: "PAVEMENT", spriteId: SPRITE_IDS.terrainPavement });
         occupancy.occupy(x, y, 1, 1);
       } else if (x >= pond.x && x < pond.x + pond.w && y >= pond.y && y < pond.y + pond.h) {
         tiles.push({ x, y, kind: "WATER", spriteId: SPRITE_IDS.terrainWater });
@@ -135,6 +148,25 @@ function buildTerrain(mapSize: number, occupancy: Occupancy): WorldTerrainTile[]
   }
   return tiles;
 }
+
+/**
+ * Which asphalt tile goes at (x, y). The carriageway nearer the middle of the
+ * street carries the dashed centre line; the junction itself carries no
+ * markings, since two sets of lines crossing read as noise.
+ */
+function roadSpriteId(x: number, y: number, road: number): string {
+  const streetX = x === road || x === road + 1;
+  const streetY = y === road || y === road + 1;
+  if (streetX && streetY) return SPRITE_IDS.roadCross;
+  if (streetX) {
+    // North-south street. Its approaches to the junction are one tile beyond it.
+    if (y === road - 1 || y === road + 2) return SPRITE_IDS.roadNSCrossing;
+    return x === road ? SPRITE_IDS.roadNSInner : SPRITE_IDS.roadNSOuter;
+  }
+  if (x === road - 1 || x === road + 2) return SPRITE_IDS.roadEWCrossing;
+  return y === road ? SPRITE_IDS.roadEWInner : SPRITE_IDS.roadEWOuter;
+}
+
 
 /** Largest footprint a building can take, in tiles. */
 const MAX_BUILDING_SIZE = 2;
@@ -325,10 +357,18 @@ function placeDecorations(
       const border = x === 0 || y === 0 || x === mapSize - 1 || y === mapSize - 1;
       const threshold = border ? 0.55 : density;
       if (r < threshold) {
-        const spriteId = random() < 0.3 ? SPRITE_IDS.treeSmall : SPRITE_IDS.treeBasic;
+        // A third of the scatter is shrubs: an unbroken canopy of full-height
+        // trees hides the buildings behind it.
+        const pick = random();
+        const bush = pick < 0.34;
+        const spriteId = bush
+          ? SPRITE_IDS.bush
+          : pick < 0.55
+            ? SPRITE_IDS.treeSmall
+            : SPRITE_IDS.treeBasic;
         decorations.push({
-          id: `tree_${x}_${y}`,
-          kind: "TREE",
+          id: `${bush ? "bush" : "tree"}_${x}_${y}`,
+          kind: bush ? "BUSH" : "TREE",
           position: { x, y },
           spriteId,
           footprint: { w: 1, h: 1 },
@@ -421,8 +461,43 @@ function doorOf(building: WorldBuilding): GridPosition {
   };
 }
 
-/** Cars per lane, spread evenly along it. */
-const CARS_PER_LANE = 2;
+/**
+ * Cars per lane. One is deliberate: traffic is a sign of life, not the subject,
+ * and a busy road pulls the eye away from the buildings the map is about.
+ */
+const CARS_PER_LANE = 1;
+
+/** Tiles between two street lamps along the same pavement. */
+const LAMP_STRIDE = 6;
+
+/**
+ * Street lamps stand on the pavement, at regular intervals along both streets.
+ * They are the one decoration allowed on an occupied tile: the pavement is
+ * exactly where they belong, and nothing else ever competes for it.
+ */
+function placeStreetLamps(mapSize: number): WorldDecoration[] {
+  const road = Math.floor(mapSize / 2);
+  const lamps: WorldDecoration[] = [];
+  const junction = (v: number) => v >= road - 1 && v <= road + 2;
+  for (const band of [road - 1, road + 2]) {
+    for (let along = 2; along < mapSize - 1; along += LAMP_STRIDE) {
+      if (junction(along)) continue;
+      for (const position of [
+        { x: band, y: along },
+        { x: along, y: band },
+      ]) {
+        lamps.push({
+          id: `lamp_${position.x}_${position.y}`,
+          kind: "LAMP",
+          position,
+          spriteId: SPRITE_IDS.lamp,
+          footprint: { w: 1, h: 1 },
+        });
+      }
+    }
+  }
+  return lamps;
+}
 
 /**
  * Traffic on the central crossroads. Each road is two tiles wide, so it carries
@@ -461,27 +536,20 @@ function placeVehicles(mapSize: number, random: () => number): WorldVehicle[] {
     drive(`car_north_${i}`, { x: road + 1, y: last }, { x: road + 1, y: 0 }, lap);
   }
 
-  // Parked: half a tile onto the verge either side of each road, so a moving
-  // car never drives through one.
+  // One parked car, half a tile onto the verge so no moving car drives through
+  // it. More than one and the street stops reading as quiet.
   const VERGE = 0.55;
-  const spots: Array<{ position: GridPosition; heading: CarHeading }> = [
-    { position: { x: road - 6, y: road - VERGE }, heading: "west" },
-    { position: { x: road + 4, y: road + 1 + VERGE }, heading: "east" },
-    { position: { x: road - VERGE, y: road - 5 }, heading: "north" },
-    { position: { x: road + 1 + VERGE, y: road + 6 }, heading: "south" },
-  ];
-  spots.forEach(({ position, heading }, index) => {
-    const along = heading === "east" || heading === "west" ? position.x : position.y;
-    if (along < 1 || along >= mapSize - 1) return;
+  const spot = { x: road - 6, y: road - VERGE };
+  if (spot.x >= 1 && spot.x < mapSize - 1) {
     vehicles.push({
-      id: `car_parked_${index}`,
-      spriteId: carSpriteId(pick(), heading),
-      from: position,
-      to: position,
+      id: "car_parked_0",
+      spriteId: carSpriteId(pick(), "west"),
+      from: spot,
+      to: spot,
       periodMs: 0,
       phaseMs: 0,
     });
-  });
+  }
   return vehicles;
 }
 
@@ -510,12 +578,14 @@ function placeCharacters(
       });
       continue;
     }
-    // No buildings yet: the character just wanders the central roads.
+    // No buildings yet: the character strolls the pavement along a street.
+    // Never the asphalt — that is where the cars are.
+    const pavement = road - 1;
     const horizontal = random() < 0.5;
     const start = Math.floor(random() * (mapSize - 2)) + 1;
     const end = Math.floor(random() * (mapSize - 2)) + 1;
-    const from = horizontal ? { x: start, y: road } : { x: road, y: start };
-    const to = horizontal ? { x: end, y: road } : { x: road, y: end };
+    const from = horizontal ? { x: start, y: pavement } : { x: pavement, y: start };
+    const to = horizontal ? { x: end, y: pavement } : { x: pavement, y: end };
     characters.push({
       id: `character_${i}`,
       position: from,
@@ -545,6 +615,7 @@ export function layoutWorld(
   reserveSignClearance(buildings, occupancy);
   const random = createSeededRandom(seed);
   const { decorations, fish } = placeDecorations(mapSize, rects, occupancy, random, cityLevel);
+  decorations.push(...placeStreetLamps(mapSize));
   const vehicles = placeVehicles(mapSize, random);
   const characters = placeCharacters(
     mapSize,
@@ -582,10 +653,14 @@ export function validateLayout(
       for (let dx = 0; dx < b.footprint.w; dx += 1)
         claim(b.position.x + dx, b.position.y + dy, b.id);
   }
-  for (const d of decorations)
+  for (const d of decorations) {
+    // A lamp is street furniture: it stands on the pavement, which is terrain
+    // and therefore already claimed. Everything else takes ground of its own.
+    if (d.kind === "LAMP") continue;
     for (let dy = 0; dy < d.footprint.h; dy += 1)
       for (let dx = 0; dx < d.footprint.w; dx += 1)
         claim(d.position.x + dx, d.position.y + dy, d.id);
+  }
 }
 
 /** Deterministic isometric draw order: back-to-front by (x + y), then x. */

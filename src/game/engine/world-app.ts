@@ -90,7 +90,11 @@ export class WorldApp {
       reducedMotion: this.options.reducedMotion,
       onZoom: (zoom) => this.events.emit("camera", { zoom }),
     });
-    app.stage.on("pointerdown", (e: FederatedPointerEvent) => this.camera?.onPointerDown(e));
+    app.stage.on("pointerdown", (e: FederatedPointerEvent) => {
+      // A tooltip left hanging while the map is dragged reads as a stuck overlay.
+      this.events.emit("hover", { buildingId: null, position: null });
+      this.camera?.onPointerDown(e);
+    });
     app.stage.on("pointermove", (e: FederatedPointerEvent) => {
       if (this.camera?.onPointerMove(e)) this.suppressNextTap = true;
     });
@@ -127,7 +131,7 @@ export class WorldApp {
         this.select(id, false);
         this.events.emit("select", { buildingId: id });
       },
-      onBuildingHover: (id) => this.events.emit("hover", { buildingId: id }),
+      onBuildingHover: (id, position) => this.events.emit("hover", { buildingId: id, position }),
       onGroundTap: () => {
         if (this.suppressNextTap) return;
         this.select(null, false);

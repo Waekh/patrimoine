@@ -14,7 +14,7 @@ export interface Footprint {
   h: number;
 }
 
-export const TERRAIN_KINDS = ["GRASS", "WATER", "ROAD"] as const;
+export const TERRAIN_KINDS = ["GRASS", "WATER", "ROAD", "PAVEMENT"] as const;
 export type TerrainKind = (typeof TERRAIN_KINDS)[number];
 
 export interface WorldTerrainTile {
@@ -49,10 +49,10 @@ export interface WorldBuilding {
 
 export interface WorldDecoration {
   id: string;
-  kind: "TREE" | "PARK" | "POND";
+  kind: "TREE" | "BUSH" | "PARK" | "POND" | "LAMP";
   position: GridPosition;
   spriteId: string;
-  /** Tiles covered, anchored at `position`. Trees and ponds take a single one. */
+  /** Tiles covered, anchored at `position`. Trees, bushes and ponds take a single one. */
   footprint: Footprint;
 }
 

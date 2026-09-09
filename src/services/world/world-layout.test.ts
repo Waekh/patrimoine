@@ -199,6 +199,68 @@ describe("WorldLayoutEngine", () => {
     }
   });
 
+  it("borde chaque rue d'un trottoir, et n'y laisse rien construire", () => {
+    const mapSize = 20;
+    const { terrain, buildings, decorations } = layoutWorld(entities, {
+      mapSize,
+      seed: 3,
+      cityLevel: 3,
+    });
+    const kind = new Map(terrain.map((t) => [`${t.x}:${t.y}`, t.kind]));
+    const road = terrain.filter((t) => t.kind === "ROAD");
+    expect(road.length).toBeGreaterThan(0);
+
+    // Every tile touching the asphalt is either more asphalt or a pavement.
+    for (const tile of road) {
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ] as const) {
+        const neighbour = kind.get(`${tile.x + dx}:${tile.y + dy}`);
+        if (!neighbour) continue;
+        expect(["ROAD", "PAVEMENT"], `${tile.x + dx},${tile.y + dy}`).toContain(neighbour);
+      }
+    }
+
+    const pavement = new Set(
+      terrain.filter((t) => t.kind === "PAVEMENT").map((t) => `${t.x}:${t.y}`),
+    );
+    expect(pavement.size).toBeGreaterThan(0);
+    for (const b of buildings)
+      for (let dy = 0; dy < b.footprint.h; dy += 1)
+        for (let dx = 0; dx < b.footprint.w; dx += 1)
+          expect(pavement.has(`${b.position.x + dx}:${b.position.y + dy}`), b.id).toBe(false);
+
+    // Lamps are the one thing that does stand on it.
+    const lamps = decorations.filter((d) => d.kind === "LAMP");
+    expect(lamps.length).toBeGreaterThan(0);
+    for (const lamp of lamps)
+      expect(pavement.has(`${lamp.position.x}:${lamp.position.y}`), lamp.id).toBe(true);
+  });
+
+  it("marque les abords du carrefour d'un passage piéton", () => {
+    const mapSize = 20;
+    const road = mapSize / 2;
+    const { terrain } = layoutWorld(entities, { mapSize, seed: 3, cityLevel: 3 });
+    const at = (x: number, y: number) => terrain.find((t) => t.x === x && t.y === y)!.spriteId;
+    for (const along of [road, road + 1]) {
+      // The four approaches, one tile out from the junction on each arm.
+      expect(at(along, road - 1)).toContain("crossing");
+      expect(at(along, road + 2)).toContain("crossing");
+      expect(at(road - 1, along)).toContain("crossing");
+      expect(at(road + 2, along)).toContain("crossing");
+    }
+    // The junction itself carries no markings: two sets of lines read as noise.
+    expect(at(road, road)).not.toContain("crossing");
+  });
+
+  it("garde la circulation rare", () => {
+    const { vehicles } = layoutWorld(entities, { mapSize: 20, seed: 3, cityLevel: 3 });
+    expect(vehicles.length).toBeLessThanOrEqual(6);
+  });
+
   it("orders back to front", () => {
     expect(zIndexOf({ x: 0, y: 0 })).toBeLessThan(zIndexOf({ x: 1, y: 0 }));
     expect(zIndexOf({ x: 0, y: 1 })).toBeLessThan(zIndexOf({ x: 1, y: 1 }));

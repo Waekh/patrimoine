@@ -34,6 +34,7 @@ import { CAR_BODY_SWATCHES, CAR_PALETTE, CAR_SPRITES } from "./lib/car-sprite-da
 import {
   CAR_COLOURS,
   CAR_HEADINGS,
+  SPRITE_IDS,
   carSpriteId,
   type CarColour,
   type CarHeading,
@@ -191,14 +192,52 @@ function tileSpeckle(
 }
 
 /**
- * Kerb along the two upper edges of the diamond, inset by one step so it reads
- * as a raised edge rather than an outline. Left edge runs (32,0) -> (0,16),
- * right edge (32,0) -> (64,16).
+ * A point inside the tile, in ground coordinates: `u` runs along the grid x
+ * axis and `v` along y, both from 0 to 1 across the diamond. Everything painted
+ * on the ground is laid out this way, so a line along a street stays parallel
+ * to the street instead of cutting across it.
  */
-function tileKerb(c: PixelCanvas, color: RGBA): void {
-  for (let i = 2; i < TILE_W / 2 - 2; i += 2) {
-    c.fillRect(32 - i, i / 2 + 1, 2, 1, color);
-    c.fillRect(30 + i, i / 2 + 1, 2, 1, color);
+function facePoint(u: number, v: number): [number, number] {
+  return [32 + 32 * u - 32 * v, 16 * u + 16 * v];
+}
+
+function faceQuad(u0: number, u1: number, v0: number, v1: number): Array<[number, number]> {
+  return [facePoint(u0, v0), facePoint(u1, v0), facePoint(u1, v1), facePoint(u0, v1)];
+}
+
+/** The four edges of a tile, named after the neighbour they face. */
+type TileEdge = "nx" | "px" | "ny" | "py";
+
+/**
+ * Line drawn one pixel inside one edge of the diamond. `dash` leaves two
+ * pixels in four, which is what turns a kerb line into a centre line.
+ */
+function edgeLine(c: PixelCanvas, edge: TileEdge, color: RGBA, dash = false): void {
+  for (let t = 0; t <= TILE_H / 2; t += 1) {
+    if (dash && t % 4 >= 2) continue;
+    const [x, y] =
+      edge === "nx"
+        ? [32 - 2 * t, t + 1]
+        : edge === "ny"
+          ? [30 + 2 * t, t + 1]
+          : edge === "px"
+            ? [62 - 2 * t, 15 + t]
+            : [34 - 2 * t, 31 - t];
+    c.fillRect(x, y, 2, 1, color);
+  }
+}
+
+/** Zebra crossing: bars parallel to the traffic, repeated across the road. */
+function crossingBars(c: PixelCanvas, along: "x" | "y", color: RGBA): void {
+  const BARS = 4;
+  const HALF = 0.09;
+  for (let k = 0; k < BARS; k += 1) {
+    const centre = (k + 0.5) / BARS;
+    const quad =
+      along === "x"
+        ? faceQuad(0.04, 0.96, centre - HALF, centre + HALF)
+        : faceQuad(centre - HALF, centre + HALF, 0.04, 0.96);
+    c.fillPolygon(quad, color);
   }
 }
 
@@ -228,32 +267,60 @@ function generateTerrain(): void {
     }
     tileSpeckle(c, shade(deep, 1.1), random, 12, 2);
   });
+  // Pavement: paving slabs, so the joints have to fall on the ground axes.
+  terrainTile(
+    PIXEL_PALETTE.pavement,
+    "terrain_pavement",
+    "world/terrain/terrain_pavement.png",
+    (c) => {
+      const joint = hex(PIXEL_PALETTE.pavementDark);
+      for (const cut of [1 / 3, 2 / 3]) {
+        c.fillPolygon(faceQuad(cut - 0.012, cut + 0.012, 0, 1), joint);
+        c.fillPolygon(faceQuad(0, 1, cut - 0.012, cut + 0.012), joint);
+      }
+      for (const edge of ["nx", "ny", "px", "py"] as const) edgeLine(c, edge, joint);
+      tileSpeckle(c, shade(hex(PIXEL_PALETTE.pavement), 1.06), createSeededRandom(1), 14, 2);
+    },
+  );
+
   const line = hex(PIXEL_PALETTE.roadLine);
-  const kerb = shade(hex(PIXEL_PALETTE.road), 1.16);
-  const grit = shade(hex(PIXEL_PALETTE.road), 0.9);
+  const grit = shade(hex(PIXEL_PALETTE.road), 1.1);
   const asphalt = (c: PixelCanvas, id: string): void => {
     tileSpeckle(c, grit, createSeededRandom(seedFromString(id)), 30, 2);
-    tileKerb(c, kerb);
+    tileSpeckle(c, hex(PIXEL_PALETTE.roadDark), createSeededRandom(seedFromString(`${id}!`)), 16, 3);
   };
-  terrainTile(PIXEL_PALETTE.road, "road_ns", "world/roads/road_ns.png", (c) => {
-    asphalt(c, "road_ns");
-    for (let i = 0; i < 5; i += 1) c.fillRect(20 + i * 6, 10 + i * 3, 3, 1, line);
-  });
-  terrainTile(PIXEL_PALETTE.road, "road_ew", "world/roads/road_ew.png", (c) => {
-    asphalt(c, "road_ew");
-    for (let i = 0; i < 5; i += 1) c.fillRect(20 + i * 6, 22 - i * 3, 3, 1, line);
-  });
+  /**
+   * `centre` is the edge shared with the opposite carriageway, `kerb` the edge
+   * against the pavement. Only the tile that owns the centre line draws it, so
+   * the dashes form one continuous line down the middle of the street.
+   */
+  const carriageway = (id: string, kerb: TileEdge, centre: TileEdge | null): void => {
+    terrainTile(PIXEL_PALETTE.road, id, `world/roads/${id}.png`, (c) => {
+      asphalt(c, id);
+      edgeLine(c, kerb, line);
+      if (centre) edgeLine(c, centre, line, true);
+    });
+  };
+  carriageway("road_ns_inner", "nx", "px");
+  carriageway("road_ns_outer", "px", null);
+  carriageway("road_ew_inner", "ny", "py");
+  carriageway("road_ew_outer", "py", null);
+
+  for (const [id, along] of [
+    ["road_ns_crossing", "y"],
+    ["road_ew_crossing", "x"],
+  ] as const) {
+    terrainTile(PIXEL_PALETTE.road, id, `world/roads/${id}.png`, (c) => {
+      asphalt(c, id);
+      crossingBars(c, along, line);
+    });
+  }
+
   terrainTile(PIXEL_PALETTE.road, "road_cross", "world/roads/road_cross.png", (c) => {
     asphalt(c, "road_cross");
-    // Painted box junction at the centre of the crossroads.
-    for (let i = 0; i < 3; i += 1) {
-      c.fillRect(26 + i * 4, 10 + i * 2, 2, 1, line);
-      c.fillRect(34 + i * 4, 18 + i * 2, 2, 1, line);
-      c.fillRect(26 + i * 4, 22 - i * 2, 2, 1, line);
-      c.fillRect(34 + i * 4, 14 - i * 2, 2, 1, line);
-    }
   });
 }
+
 
 type Material = "brick" | "stone" | "glass" | "metal" | "plaster";
 type RoofKind = "flat" | "hip" | "lowpitch";
@@ -988,8 +1055,78 @@ function generateNature(): void {
   tree("tree_basic", 10, 9);
   tree("tree_small", 7, 7);
 
+  generateBush();
+  generateLamp();
   generatePark();
   generatePond();
+}
+
+/**
+ * Low shrub. Trees alone leave the lawns flat: a shrub reads at half the
+ * height and fills the ground between them without hiding anything.
+ */
+function generateBush(): void {
+  const W = 24;
+  const H = 20;
+  const c = new PixelCanvas(W, H);
+  const cx = W / 2;
+  const baseY = H - 4;
+  c.fillPolygon(diamond(cx + 2, baseY + 1, 16, 8), SHADOW);
+  const leaf = hex(PIXEL_PALETTE.leaf);
+  // Three overlapping mounds, the same rounded foliage as a tree crown at half
+  // the size: one mound alone reads as a stone.
+  drawCanopy(c, cx - 4, baseY - 4, 5, 4, shade(leaf, 0.86));
+  drawCanopy(c, cx + 4, baseY - 4, 5, 4, shade(leaf, 0.92));
+  drawCanopy(c, cx, baseY - 7, 6, 5, leaf);
+  save(
+    {
+      id: SPRITE_IDS.bush,
+      type: "nature",
+      file: `world/nature/${SPRITE_IDS.bush}.png`,
+      width: W,
+      height: H,
+      anchor: { x: cx, y: baseY },
+      footprint: { w: 1, h: 1 },
+    },
+    c,
+  );
+}
+
+/**
+ * Street lamp. It stands on the pavement rather than the grass, which is what
+ * makes the pavement read as a street edge instead of a grey band.
+ */
+function generateLamp(): void {
+  const W = 16;
+  const H = 46;
+  const c = new PixelCanvas(W, H);
+  const cx = 8;
+  const baseY = H - 3;
+  const metal = hex(PIXEL_PALETTE.metal);
+  const dark = hex(PIXEL_PALETTE.metalDark);
+  c.fillPolygon(diamond(cx + 1, baseY + 1, 10, 5), SHADOW);
+  // Plinth, column, then the arm reaching over the road.
+  c.fillRect(cx - 2, baseY - 3, 5, 3, dark);
+  c.fillRect(cx - 1, baseY - 3, 1, 3, metal);
+  c.fillRect(cx - 1, 10, 2, baseY - 13, dark);
+  c.fillRect(cx - 1, 10, 1, baseY - 13, metal);
+  for (let i = 0; i < 4; i += 1) c.fillRect(cx + i, 9 - Math.ceil(i / 2), 1, 1, dark);
+  // Lamp head, and the light it throws down.
+  c.fillRect(cx + 2, 8, 5, 2, dark);
+  c.fillRect(cx + 3, 10, 3, 1, hex(PIXEL_PALETTE.windowLit));
+  c.fillRect(cx + 4, 11, 1, 1, hex(PIXEL_PALETTE.windowLit, 150));
+  save(
+    {
+      id: SPRITE_IDS.lamp,
+      type: "decoration",
+      file: `world/decorations/${SPRITE_IDS.lamp}.png`,
+      width: W,
+      height: H,
+      anchor: { x: cx, y: baseY },
+      footprint: { w: 1, h: 1 },
+    },
+    c,
+  );
 }
 
 /**

@@ -11,6 +11,8 @@ export interface WorldCanvasProps {
   manifest: ClientAssetManifest;
   selectedBuildingId: string | null;
   onSelect: (buildingId: string | null) => void;
+  /** Mouse only: the building under the pointer and where the pointer is. */
+  onHover?: (buildingId: string | null, position: { x: number; y: number } | null) => void;
   animateOnMount: boolean;
   /** Pixels hidden at the bottom of the canvas by an overlay (mobile bottom sheet). */
   focusInsetBottom?: number;
@@ -51,6 +53,7 @@ export function WorldCanvas({
   manifest,
   selectedBuildingId,
   onSelect,
+  onHover,
   animateOnMount,
   focusInsetBottom = 0,
   onReady,
@@ -62,13 +65,15 @@ export function WorldCanvas({
   const appRef = useRef<WorldApp | null>(null);
   const [status, setStatus] = useState<Status>("loading");
   const onSelectRef = useRef(onSelect);
+  const onHoverRef = useRef(onHover);
   const worldRef = useRef(world);
   const onReadyRef = useRef(onReady);
   useEffect(() => {
     onSelectRef.current = onSelect;
+    onHoverRef.current = onHover;
     worldRef.current = world;
     onReadyRef.current = onReady;
-  }, [onSelect, world, onReady]);
+  }, [onSelect, onHover, world, onReady]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -93,6 +98,9 @@ export function WorldCanvas({
           fitToViewport,
         });
         app.events.on("select", ({ buildingId }) => onSelectRef.current(buildingId));
+        app.events.on("hover", ({ buildingId, position }) =>
+          onHoverRef.current?.(buildingId, position),
+        );
         app.events.on("ready", () => {
           if (cancelled || !app) return;
           appRef.current = app;

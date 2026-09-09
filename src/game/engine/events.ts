@@ -3,7 +3,12 @@ export interface WorldEvents {
   ready: void;
   error: { message: string };
   select: { buildingId: string | null };
-  hover: { buildingId: string | null };
+  /**
+   * Mouse only, and carries the pointer position in canvas pixels: the view
+   * anchors its tooltip there rather than to the building, which would need
+   * re-projecting on every camera move.
+   */
+  hover: { buildingId: string | null; position: { x: number; y: number } | null };
   camera: { zoom: number };
 }
 
