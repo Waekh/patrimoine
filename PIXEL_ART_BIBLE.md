@@ -100,6 +100,13 @@ de haut, ce qui donne exactement la pente 2:1 de la projection. Le versant droit
 est ensuite réassombri d'un bloc, et le faîtage plat garde la teinte éclairée
 puisqu'il regarde le ciel.
 
+Les bâtiments d'un quartier portent l'emblème de leur famille sur une plaque
+en haut de façade : `€` pour le quartier bancaire, `%` pour le quartier
+financier. Elle n'est dessinée que si le mur est assez haut pour la porter, si
+bien que l'immeuble qui ancre un îlot l'affiche et pas ses petits voisins. Une
+façade qui se signale déjà seule, comme la porte ronde d'un coffre, n'en reçoit
+pas.
+
 Les entrées portent l'identité du bâtiment : porte de bois, portail à fronton,
 rideau métallique avec quai de chargement, porte de coffre circulaire à jante
 dorée, ou vitrine avec store.

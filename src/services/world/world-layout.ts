@@ -136,24 +136,56 @@ const MAX_BUILDING_SIZE = 2;
 const SLOT_STRIDE = MAX_BUILDING_SIZE + 1;
 
 /**
- * Slots along one axis. The pitch is the same for every footprint, so a 1x1
- * building lands on the same street line as a 2x2 one instead of shifting the
- * whole row. A stride of 2 used to give a 2x2 building no gap at all while a
- * 1x1 left a lone hole beside it; reserving the largest footprint in every slot
- * guarantees at least one free tile between two neighbours.
- *
- * `anchor` decides which end of the district is filled first.
+ * Tiles of street frontage a block takes before wrapping to the next row. Six
+ * holds three large buildings side by side, which keeps a district compact
+ * instead of stringing it into a line across the whole quadrant.
  */
-function axisPositions(start: number, length: number, anchor: "start" | "end"): number[] {
-  const positions: number[] = [];
-  for (let value = start; value + MAX_BUILDING_SIZE <= start + length; value += SLOT_STRIDE)
-    positions.push(value);
-  return anchor === "start" ? positions : positions.reverse();
+const BLOCK_FRONTAGE = 6;
+
+/**
+ * Coordinate of a building along the street, from its offset in the terrace.
+ * Buildings in a row are attached, so the offset is a running total of the
+ * widths already placed, not a slot on a spaced grid.
+ *
+ * `anchor` says which end of the district faces the central crossroads: a block
+ * always grows away from it, and the building's inner edge is what lines up.
+ */
+function frontagePosition(
+  start: number,
+  length: number,
+  offset: number,
+  size: number,
+  anchor: "start" | "end",
+): number {
+  return anchor === "start" ? start + offset : start + length - size - offset;
 }
 
 /**
- * Buildings are placed by priority (value desc) on a spaced sub-grid inside
- * their district, row by row, so the result is stable when values change.
+ * Coordinate across the street, from the row index. Rows are spaced by the
+ * largest footprint plus a street, and it is the *front* edge of every building
+ * that lines up, so a 1x1 and a 2x2 in the same row share one pavement.
+ */
+function rowPosition(
+  start: number,
+  length: number,
+  row: number,
+  size: number,
+  anchor: "start" | "end",
+): number {
+  const depth = row * SLOT_STRIDE;
+  return anchor === "start" ? start + depth : start + length - size - depth;
+}
+
+/**
+ * Buildings are placed by value, largest first, and packed into a terrace
+ * inside their district: neighbours are attached along the street, rows are
+ * separated by one, and the block grows away from the central crossroads. The
+ * largest asset of a family therefore anchors the corner of its block and the
+ * smaller ones line up beside it, which is what makes a district read as a
+ * quarter rather than as scattered buildings.
+ *
+ * A consequence worth knowing: because neighbours are attached, a building that
+ * grows to a 2x2 footprint shifts the ones after it in its row.
  */
 function placeEntities(
   entities: readonly WorldEntity[],
@@ -169,23 +201,37 @@ function placeEntities(
     CASH_DISTRICT: 0,
     ALTERNATIVE_DISTRICT: 0,
   };
+  /** Where the next building of each district goes: row, then offset in it. */
+  const cursors: Record<string, { row: number; offset: number }> = {};
   const sorted = [...entities].sort(
     (a, b) => b.valueCents - a.valueCents || a.assetId.localeCompare(b.assetId),
   );
   for (const entity of sorted) {
     const rect = rects[entity.district];
     const { w, h } = entity.footprint;
+    const cursor = (cursors[entity.district] ??= { row: 0, offset: 0 });
     let placed: GridPosition | null = null;
-    const xs = axisPositions(rect.x, rect.w, rect.anchorX);
-    const ys = axisPositions(rect.y, rect.h, rect.anchorY);
-    for (const y of ys) {
-      for (const x of xs) {
-        if (occupancy.areaFree(x, y, w, h)) {
-          placed = { x, y };
-          break;
-        }
+    // Walk the terrace: try the current spot, then the next one along the row,
+    // then the next row. The occupancy check still has the last word, because
+    // roads, water and a neighbour's footprint can all block a slot.
+    for (let attempt = 0; attempt < 64 && !placed; attempt += 1) {
+      const wrapped = cursor.offset + w > BLOCK_FRONTAGE;
+      if (wrapped) {
+        cursor.row += 1;
+        cursor.offset = 0;
       }
-      if (placed) break;
+      const x = frontagePosition(rect.x, rect.w, cursor.offset, w, rect.anchorX);
+      const y = rowPosition(rect.y, rect.h, cursor.row, h, rect.anchorY);
+      const insideX = x >= rect.x && x + w <= rect.x + rect.w;
+      const insideY = y >= rect.y && y + h <= rect.y + rect.h;
+      if (insideX && insideY && occupancy.areaFree(x, y, w, h)) {
+        placed = { x, y };
+        cursor.offset += w;
+        break;
+      }
+      // Blocked: step along the row, and let the next turn wrap if needed.
+      cursor.offset += insideY ? 1 : BLOCK_FRONTAGE;
+      if (!insideY && cursor.row * SLOT_STRIDE > rect.h) break;
     }
     if (!placed) {
       unplaced.push(entity);

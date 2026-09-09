@@ -5,11 +5,13 @@ import {
   SIGN_BOARD_H,
   SIGN_BOARD_W,
   SIGN_BOARD_X,
-  SIGN_BOARD_Y,
+  SIGN_POST_H,
+  SIGN_POST_H_HIGH,
   SIGN_LINES,
   SIGN_LINE_GAP,
   SIGN_TEXT_W,
   SIGN_W,
+  signBoardY,
   wrapLabel,
 } from "@/config/pixel-font";
 import { SPRITE_IDS } from "@/config/sprites";
@@ -214,7 +216,15 @@ function buildSign(
   grid: IsoGridConfig,
   callbacks: SceneCallbacks,
 ): Container | null {
-  const board = spriteFor(registry, SPRITE_IDS.signBoard);
+  // Neighbours in a terrace alternate between a low and a high post, so their
+  // boards sit at different heights instead of covering one another.
+  const front = {
+    x: building.position.x + building.footprint.w - 1,
+    y: building.position.y + building.footprint.h - 1,
+  };
+  const high = (front.x + front.y) % 2 === 1;
+  const board = spriteFor(registry, high ? SPRITE_IDS.signBoardHigh : SPRITE_IDS.signBoard);
+  const postHeight = high ? SIGN_POST_H_HIGH : SIGN_POST_H;
   const lines = wrapLabel(building.label, SIGN_TEXT_W, SIGN_LINES);
   if (!board || lines.length === 0) return null;
   const container = new Container();
@@ -229,20 +239,18 @@ function buildSign(
   container.on("pointerover", () => callbacks.onBuildingHover(building.id));
   container.on("pointerout", () => callbacks.onBuildingHover(null));
   // Front corner of the footprint, then a few pixels towards the viewer.
-  const front = {
-    x: building.position.x + building.footprint.w - 1,
-    y: building.position.y + building.footprint.h - 1,
-  };
   const { x, y } = gridToScreen(front, grid);
-  // Offset towards the right-hand face: the entrance is drawn on the left one,
-  // and a sign planted dead centre would hide the door it points at.
-  container.position.set(x + grid.tileWidth * 0.36, y + grid.tileHeight / 2 + 2);
+  // Slightly towards the right-hand face, since the entrance is drawn on the
+  // left one; the offset stays inside the building's own frontage so the sign
+  // cannot drift over the neighbour it is attached to.
+  container.position.set(x + grid.tileWidth * 0.2, y + grid.tileHeight / 2 + 2);
   container.zIndex = zIndexOf(front) + 1;
   container.addChild(board);
   // Board coordinates are relative to the sprite anchor (foot of the posts).
   const blockHeight = lines.length * GLYPH_HEIGHT + (lines.length - 1) * SIGN_LINE_GAP;
   const originX = SIGN_BOARD_X + SIGN_BOARD_W / 2 - SIGN_W / 2;
-  const originY = SIGN_BOARD_Y - SIGN_BASE_Y + Math.floor((SIGN_BOARD_H - blockHeight) / 2);
+  const originY =
+    signBoardY(postHeight) - SIGN_BASE_Y + Math.floor((SIGN_BOARD_H - blockHeight) / 2);
   let drawn = 0;
   lines.forEach((line, index) => {
     const label = createLabel(registry, line, SPRITE_IDS.font, { align: "center" });

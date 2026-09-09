@@ -890,11 +890,27 @@
       "id": "sign_board",
       "type": "ui",
       "file": "ui/sign_board.png",
-      "width": 82,
-      "height": 40,
+      "width": 80,
+      "height": 69,
       "anchor": {
-        "x": 41,
-        "y": 37
+        "x": 40,
+        "y": 66
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": true
+    },
+    {
+      "id": "sign_board_high",
+      "type": "ui",
+      "file": "ui/sign_board_high.png",
+      "width": 80,
+      "height": 69,
+      "anchor": {
+        "x": 40,
+        "y": 66
       },
       "footprint": {
         "w": 1,

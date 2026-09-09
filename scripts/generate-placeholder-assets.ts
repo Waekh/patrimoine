@@ -8,6 +8,7 @@ import {
   drawHipRoof,
   drawIsoBox,
   faceBand,
+  faceOrigin,
   faceSteps,
   fillDiamond,
   fillFaceEllipse,
@@ -15,17 +16,20 @@ import {
   outlineDiamond,
 } from "./lib/iso";
 import { createSeededRandom, seedFromString } from "../src/services/world/seeded-random";
+import { DISTRICT_EMBLEM, type DistrictId } from "../src/config/districts";
+import { GLYPH_WIDTH } from "../src/config/pixel-font";
 import {
   SIGN_BASE_Y,
   SIGN_BOARD_H,
   SIGN_BOARD_W,
   SIGN_BOARD_X,
-  SIGN_BOARD_Y,
   SIGN_H,
   SIGN_POST_H,
+  SIGN_POST_H_HIGH,
   SIGN_W,
+  signBoardY,
 } from "../src/config/pixel-font";
-import { buildFontAtlas } from "./lib/font";
+import { buildFontAtlas, drawGlyph } from "./lib/font";
 
 /**
  * Generates PLACEHOLDER pixel-art sprites that respect the Pixel Art Bible
@@ -37,6 +41,8 @@ const TILE_W = 64;
 const TILE_H = 32;
 const OUT_DIR = path.join(process.cwd(), "public", "assets");
 const OUTLINE = hex(PIXEL_PALETTE.outline);
+/** A facade shorter than this has no clear band of wall to carry an emblem. */
+const EMBLEM_MIN_HEIGHT = 34;
 const SHADOW = hex(PIXEL_PALETTE.shadow, 90);
 
 interface ManifestEntry {
@@ -238,6 +244,10 @@ interface BuildingStyle {
   roof: RoofKind;
   entrance: EntranceKind;
   category: string;
+  /** District the buildings of this style belong to. */
+  district: DistrictId;
+  /** False when the facade already carries its own sign, like a vault door. */
+  emblem?: boolean;
   /** Vertical extrusion per level, in pixels. */
   heights: [number, number, number, number, number];
   /** Pixels between two floors: drives bands and window rows. */
@@ -258,6 +268,7 @@ const STYLES: Record<string, BuildingStyle> = {
     roof: "hip",
     entrance: "door",
     category: "real_estate",
+    district: "HOME_DISTRICT",
     heights: [20, 24, 28, 32, 38],
     floor: 11,
   },
@@ -270,6 +281,7 @@ const STYLES: Record<string, BuildingStyle> = {
     roof: "flat",
     entrance: "door",
     category: "real_estate",
+    district: "HOME_DISTRICT",
     heights: [34, 46, 58, 66, 86],
     floor: 10,
     balconies: true,
@@ -283,6 +295,7 @@ const STYLES: Record<string, BuildingStyle> = {
     roof: "flat",
     entrance: "shopfront",
     category: "real_estate",
+    district: "REAL_ESTATE_DISTRICT",
     heights: [32, 42, 54, 66, 82],
     floor: 10,
   },
@@ -295,6 +308,7 @@ const STYLES: Record<string, BuildingStyle> = {
     roof: "flat",
     entrance: "portal",
     category: "cash",
+    district: "CASH_DISTRICT",
     heights: [26, 32, 38, 46, 58],
     floor: 12,
     columns: true,
@@ -307,6 +321,7 @@ const STYLES: Record<string, BuildingStyle> = {
     roof: "flat",
     entrance: "vaultDoor",
     category: "cash",
+    district: "CASH_DISTRICT",
     heights: [20, 24, 28, 34, 42],
     floor: 14,
     rivets: true,
@@ -320,6 +335,7 @@ const STYLES: Record<string, BuildingStyle> = {
     roof: "flat",
     entrance: "shopfront",
     category: "financial",
+    district: "FINANCE_DISTRICT",
     heights: [42, 58, 74, 90, 114],
     floor: 8,
   },
@@ -332,6 +348,7 @@ const STYLES: Record<string, BuildingStyle> = {
     roof: "flat",
     entrance: "portal",
     category: "financial",
+    district: "FINANCE_DISTRICT",
     heights: [30, 38, 50, 62, 78],
     floor: 11,
     arched: true,
@@ -344,6 +361,7 @@ const STYLES: Record<string, BuildingStyle> = {
     roof: "lowpitch",
     entrance: "shutter",
     category: "alternative",
+    district: "ALTERNATIVE_DISTRICT",
     heights: [18, 22, 26, 32, 40],
     floor: 20,
   },
@@ -660,6 +678,42 @@ function drawEntrance(c: PixelCanvas, box: IsoBox, style: BuildingStyle): void {
 }
 
 /** Vents, water tank and antenna: the silhouette detail that sells a flat roof. */
+/**
+ * District emblem on the upper facade: a lit plaque carrying one glyph of the
+ * sign font, so a bank block reads as banking without a click. Skipped when the
+ * wall is too short to hold it, which is what leaves the small satellites of a
+ * block plain and marks only its anchor.
+ */
+function drawEmblem(c: PixelCanvas, box: IsoBox, style: BuildingStyle): void {
+  const glyph = DISTRICT_EMBLEM[style.district];
+  if (!glyph || style.emblem === false) return;
+  const steps = faceSteps(box);
+  // Needs a clear band of wall above the ground floor and room either side.
+  if (box.height < EMBLEM_MIN_HEIGHT || steps < 8) return;
+
+  // The plaque is four steps wide (8 px) and 11 px tall, which frames the 5x7
+  // glyph with a one-pixel margin once the glyph is centred inside it.
+  const plaqueW = 4;
+  const plaqueH = 11;
+  const u = Math.floor(steps / 2) - 2;
+  const v = box.height - plaqueH - 4;
+  const trim = hex(style.trim);
+  fillFaceRect(c, box, "left", u - 1, v - 1, plaqueW + 2, plaqueH + 2, hex(PIXEL_PALETTE.outline));
+  fillFaceRect(c, box, "left", u, v, plaqueW, plaqueH, shade(trim, 1.15));
+  fillFaceRect(c, box, "left", u, v, plaqueW, 1, shade(trim, 1.4));
+
+  // The glyph is a bitmap, so it goes on the canvas rather than into a face
+  // rectangle: centred on the plaque, which spans 2 * plaqueW pixels across.
+  const origin = faceOrigin(box, "left", u);
+  drawGlyph(
+    c,
+    glyph,
+    Math.round(origin.x + plaqueW - Math.floor(GLYPH_WIDTH / 2) - 1),
+    Math.round(origin.y - v - plaqueH + 2),
+    hex(PIXEL_PALETTE.outline),
+  );
+}
+
 function drawRoofFurniture(
   c: PixelCanvas,
   box: IsoBox,
@@ -721,6 +775,7 @@ function generateBuilding(kind: string, style: BuildingStyle, level: number): vo
   if (style.glass || style.material === "glass") drawWindows(c, box, style, random);
   if (style.rivets) drawRivets(c, box);
   drawEntrance(c, box, style);
+  drawEmblem(c, box, style);
 
   const roofY = baseY - height;
   if (style.roof === "flat") {
@@ -1138,9 +1193,16 @@ function generateFish(): void {
  * blits the asset label onto it from the font atlas, since the text is data.
  */
 function generateSign(): void {
+  signSprite("sign_board", SIGN_POST_H);
+  signSprite("sign_board_high", SIGN_POST_H_HIGH);
+}
+
+/** One signpost. Two heights exist so neighbouring signs do not collide. */
+function signSprite(id: string, postHeight: number): void {
   const c = new PixelCanvas(SIGN_W, SIGN_H);
   const post = hex(PIXEL_PALETTE.wood);
   const board = hex(PIXEL_PALETTE.wall);
+  const boardY = signBoardY(postHeight);
   c.fillPolygon(
     [
       [SIGN_W / 2, SIGN_BASE_Y - 2],
@@ -1152,18 +1214,18 @@ function generateSign(): void {
   );
   // Two posts, then the board they carry.
   for (const dx of [-SIGN_BOARD_W / 2 + 3, SIGN_BOARD_W / 2 - 5] as const) {
-    c.fillRect(SIGN_W / 2 + dx, SIGN_BASE_Y - SIGN_POST_H, 2, SIGN_POST_H + 1, OUTLINE);
-    c.fillRect(SIGN_W / 2 + dx, SIGN_BASE_Y - SIGN_POST_H, 1, SIGN_POST_H, shade(post, 1.15));
+    c.fillRect(SIGN_W / 2 + dx, SIGN_BASE_Y - postHeight, 2, postHeight + 1, OUTLINE);
+    c.fillRect(SIGN_W / 2 + dx, SIGN_BASE_Y - postHeight, 1, postHeight, shade(post, 1.15));
   }
-  c.fillRect(SIGN_BOARD_X - 1, SIGN_BOARD_Y - 1, SIGN_BOARD_W + 2, SIGN_BOARD_H + 2, OUTLINE);
-  c.fillRect(SIGN_BOARD_X, SIGN_BOARD_Y, SIGN_BOARD_W, SIGN_BOARD_H, board);
-  c.fillRect(SIGN_BOARD_X, SIGN_BOARD_Y, SIGN_BOARD_W, 1, shade(board, 1.12));
-  c.fillRect(SIGN_BOARD_X, SIGN_BOARD_Y + SIGN_BOARD_H - 1, SIGN_BOARD_W, 1, shade(board, 0.84));
+  c.fillRect(SIGN_BOARD_X - 1, boardY - 1, SIGN_BOARD_W + 2, SIGN_BOARD_H + 2, OUTLINE);
+  c.fillRect(SIGN_BOARD_X, boardY, SIGN_BOARD_W, SIGN_BOARD_H, board);
+  c.fillRect(SIGN_BOARD_X, boardY, SIGN_BOARD_W, 1, shade(board, 1.12));
+  c.fillRect(SIGN_BOARD_X, boardY + SIGN_BOARD_H - 1, SIGN_BOARD_W, 1, shade(board, 0.84));
   save(
     {
-      id: "sign_board",
+      id,
       type: "ui",
-      file: "ui/sign_board.png",
+      file: `ui/${id}.png`,
       width: SIGN_W,
       height: SIGN_H,
       anchor: { x: SIGN_W / 2, y: SIGN_BASE_Y },

@@ -67,18 +67,36 @@ export function truncateLabel(text: string, maxWidth: number): string {
  * generator because the renderer has to place the label on the board: both
  * sides read the same numbers, so the text can never drift off the panel.
  */
-export const SIGN_W = 82;
-/** Two lines of text: an asset name rarely fits on one at this cell width. */
-export const SIGN_LINES = 2;
+/**
+ * Buildings in a block are attached, so a sign much wider than the facade it
+ * names runs into its neighbours'. The board is therefore barely wider than one
+ * tile and gains a third line instead of width: at one tile exactly it was
+ * cutting ordinary French words such as "PRINCIPALE" in half.
+ */
+export const SIGN_W = 80;
+export const SIGN_LINES = 3;
 export const SIGN_LINE_GAP = 2;
-export const SIGN_BOARD_W = 74;
+export const SIGN_BOARD_W = 72;
 export const SIGN_BOARD_H = SIGN_LINES * GLYPH_HEIGHT + (SIGN_LINES - 1) * SIGN_LINE_GAP + 6;
+
+/**
+ * Two post heights, alternated from tile to tile. A board is wider than the
+ * facade it names — an eleven-letter French word needs more than one tile at
+ * this cell width — so two neighbours in a terrace would otherwise overlap.
+ * Staggering their height lets both stay whole and readable.
+ */
 export const SIGN_POST_H = 10;
-export const SIGN_H = SIGN_BOARD_H + SIGN_POST_H + 8;
+export const SIGN_POST_H_HIGH = 30;
+export const SIGN_H = SIGN_BOARD_H + SIGN_POST_H_HIGH + 8;
 /** Sprite anchor: where the posts meet the ground. */
 export const SIGN_BASE_Y = SIGN_H - 3;
 export const SIGN_BOARD_X = (SIGN_W - SIGN_BOARD_W) / 2;
-export const SIGN_BOARD_Y = SIGN_BASE_Y - SIGN_POST_H - SIGN_BOARD_H;
+
+/** Top of the board, for a given post height, relative to the canvas. */
+export function signBoardY(postHeight: number): number {
+  return SIGN_BASE_Y - postHeight - SIGN_BOARD_H;
+}
+
 /** Usable text width inside the board, leaving a 3 px margin on each side. */
 export const SIGN_TEXT_W = SIGN_BOARD_W - 6;
 

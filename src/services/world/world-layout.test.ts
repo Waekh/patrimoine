@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { layoutWorld, validateLayout, zIndexOf } from "./world-layout";
 import { mapAssetsToWorldEntities } from "./wealth-to-world";
-import type { WorldEntity } from "@/types/world";
+import type { WorldBuilding, WorldEntity } from "@/types/world";
 
 const entities = mapAssetsToWorldEntities([
   {
@@ -51,37 +51,68 @@ describe("WorldLayoutEngine", () => {
     }
   });
 
-  it("always leaves at least one free tile between two buildings", () => {
-    // A mix of 1x1 and 2x2 footprints in the same district used to touch on one
-    // side and leave a lone hole on the other: the slot pitch now reserves the
-    // largest footprint whatever the building actually takes.
+  it("packs the buildings of a district into one connected block", () => {
+    // Same district, mixed footprints: they must end up as a quarter, not as
+    // buildings scattered across the quadrant.
     const mixed = mapAssetsToWorldEntities([
-      { id: "a", name: "A", category: "ETF", valueCents: 90_000_000, currency: "EUR" },
-      { id: "b", name: "B", category: "ETF", valueCents: 80_000_000, currency: "EUR" },
-      { id: "c", name: "C", category: "ETF", valueCents: 70_000_000, currency: "EUR" },
-      { id: "d", name: "D", category: "ETF", valueCents: 100_000, currency: "EUR" },
-      { id: "e", name: "E", category: "ETF", valueCents: 90_000, currency: "EUR" },
-      { id: "f", name: "F", category: "ETF", valueCents: 80_000, currency: "EUR" },
+      { id: "a", name: "A", category: "CASH", valueCents: 90_000_000, currency: "EUR" },
+      { id: "b", name: "B", category: "SAVINGS", valueCents: 400_000, currency: "EUR" },
+      { id: "c", name: "C", category: "SAVINGS", valueCents: 300_000, currency: "EUR" },
+      { id: "d", name: "D", category: "SAVINGS", valueCents: 200_000, currency: "EUR" },
+      { id: "e", name: "E", category: "CASH", valueCents: 100_000, currency: "EUR" },
     ]);
-    const r = layoutWorld(mixed, { mapSize: 32, seed: 3, cityLevel: 4 });
+    const r = layoutWorld(mixed, { mapSize: 32, seed: 5, cityLevel: 4 });
     expect(r.unplaced).toHaveLength(0);
-    const footprints = new Set(r.buildings.map((b) => `${b.footprint.w}x${b.footprint.h}`));
-    expect(footprints.size).toBeGreaterThan(1);
-    for (const a of r.buildings) {
-      for (const b of r.buildings) {
-        if (a.id === b.id) continue;
-        // Chebyshev distance between the two rectangles, edges included.
-        const dx = Math.max(
-          a.position.x - (b.position.x + b.footprint.w - 1),
-          b.position.x - (a.position.x + a.footprint.w - 1),
-        );
-        const dy = Math.max(
-          a.position.y - (b.position.y + b.footprint.h - 1),
-          b.position.y - (a.position.y + a.footprint.h - 1),
-        );
-        expect(Math.max(dx, dy), `${a.id} touche ${b.id}`).toBeGreaterThanOrEqual(2);
-      }
-    }
+    const block = r.buildings.filter((b) => b.district === "CASH_DISTRICT");
+    expect(block.length).toBe(5);
+
+    /** Tiles between two footprints; 0 means they share an edge. */
+    const gap = (a: WorldBuilding, b: WorldBuilding) => {
+      const dx = Math.max(
+        a.position.x - (b.position.x + b.footprint.w),
+        b.position.x - (a.position.x + a.footprint.w),
+      );
+      const dy = Math.max(
+        a.position.y - (b.position.y + b.footprint.h),
+        b.position.y - (a.position.y + a.footprint.h),
+      );
+      return Math.max(dx, dy);
+    };
+
+    // At least one pair is attached: that is what "collé" means.
+    const attached = block.some((a) => block.some((b) => a.id !== b.id && gap(a, b) === 0));
+    expect(attached).toBe(true);
+
+    // And the block holds together: every building is reachable from the first
+    // through neighbours that either touch it or face it across the street.
+    const seen = new Set([block[0]!.id]);
+    for (let pass = 0; pass < block.length; pass += 1)
+      for (const a of block)
+        for (const b of block)
+          if (seen.has(a.id) && !seen.has(b.id) && gap(a, b) <= 1) seen.add(b.id);
+    expect(seen.size).toBe(block.length);
+  });
+
+  it("anchors a block with its largest asset", () => {
+    const entitiesByValue = mapAssetsToWorldEntities([
+      {
+        id: "big",
+        name: "Compte courant",
+        category: "CASH",
+        valueCents: 50_000_000,
+        currency: "EUR",
+      },
+      { id: "small", name: "Livret A", category: "SAVINGS", valueCents: 500_000, currency: "EUR" },
+    ]);
+    const r = layoutWorld(entitiesByValue, { mapSize: 32, seed: 8, cityLevel: 3 });
+    const big = r.buildings.find((b) => b.assetId === "big")!;
+    const small = r.buildings.find((b) => b.assetId === "small")!;
+    // Every district fills from the central crossroads, so the anchor of a
+    // block ends up nearer the middle of the map than its satellites.
+    const centre = 32 / 2;
+    const toCentre = (b: WorldBuilding) =>
+      Math.abs(b.position.x - centre) + Math.abs(b.position.y - centre);
+    expect(toCentre(big)).toBeLessThan(toCentre(small));
   });
 
   it("gives the public garden a 2x2 square that nothing else overlaps", () => {

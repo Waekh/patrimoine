@@ -112,10 +112,17 @@ assets + liabilities
    → WealthCalculationService  → WealthSummary
    → WealthScoreService        → wealthScore, worldLevel, cityLevel
    → WealthToWorldService      → WorldEntity[] (type, level, assetId)
-   → WorldLayoutEngine         → positions par district, collisions validées, seed déterministe
+   → WorldLayoutEngine         → îlots par quartier, collisions validées, seed déterministe
    → WorldState (JSON sérialisable)
    → PixiJS WorldRenderer      → sprites via asset-manifest, z-order par (y, x)
 ```
+
+Chaque famille d'actifs a son quartier (`src/config/districts.ts`), et les
+bâtiments d'un quartier sont **accolés** : ils forment une rangée qui part du
+carrefour central, l'actif le plus important en tête d'îlot, les autres à sa
+suite, avec une rue entre deux rangées. C'est ce qui fait lire un quartier comme
+un îlot plutôt que comme des bâtiments dispersés. Conséquence assumée : un
+bâtiment qui passe en emprise 2x2 décale ceux qui le suivent dans sa rangée.
 
 Frontière React ↔ PixiJS : `WorldCanvas` (composant client) instancie `WorldApp`
 (classe PixiJS) et communique par un petit bus d'événements typé

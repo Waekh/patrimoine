@@ -50,5 +50,6 @@ export const SPRITE_IDS = {
   characterBasic: "character_basic",
   selection: "selection_ring",
   signBoard: "sign_board",
+  signBoardHigh: "sign_board_high",
   font: "font_5x7",
 } as const;

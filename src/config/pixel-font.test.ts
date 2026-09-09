@@ -45,6 +45,21 @@ describe("sign wrapping", () => {
     for (const line of lines) expect(measureLabel(line)).toBeLessThanOrEqual(SIGN_TEXT_W);
   });
 
+  it("fits the ordinary French labels whole, without cutting a word", () => {
+    // The board is sized so these never lose a letter; a narrower one turned
+    // "PRINCIPALE" into "PRINCIP.".
+    for (const label of [
+      "Résidence principale",
+      "Compte courant",
+      "Assurance vie",
+      "Obligations",
+      "Livret A",
+    ]) {
+      const lines = wrapLabel(label, SIGN_TEXT_W, SIGN_LINES);
+      expect(lines.join(" "), label).toBe(normaliseLabel(label));
+    }
+  });
+
   it("never produces more lines than the board has", () => {
     const lines = wrapLabel(
       "Assurance vie multisupport en unités de compte",
