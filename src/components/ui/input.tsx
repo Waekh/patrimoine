@@ -1,8 +1,13 @@
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/utils/cn";
 
+/**
+ * Controls read as recessed: a 2 px outline in the sprite ink plus an inset
+ * hard shadow. Raised surfaces (buttons, cards) use `.hard-shadow` instead, so
+ * the two are never confused.
+ */
 const base =
-  "h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg placeholder:text-fg-muted focus:border-focus disabled:opacity-60 aria-[invalid=true]:border-negative";
+  "sunken h-10 w-full rounded-md border-2 border-ink bg-surface px-3 text-sm text-fg placeholder:text-fg-muted focus:border-focus disabled:opacity-60 aria-[invalid=true]:border-negative";
 
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(base, className)} {...rest} />;

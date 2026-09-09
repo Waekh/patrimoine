@@ -7,7 +7,7 @@ import { LogoutButton } from "@/features/auth/logout-button";
 export function AppShell({ children, email }: { children: ReactNode; email: string }) {
   return (
     <div className="flex min-h-screen">
-      <aside className="border-border bg-surface sticky top-0 hidden h-screen w-[210px] shrink-0 flex-col border-r px-3 py-4 md:flex">
+      <aside className="border-ink bg-surface sticky top-0 hidden h-screen w-[210px] shrink-0 flex-col border-r-2 px-3 py-4 md:flex">
         <Link href="/world" className="px-3 pb-6">
           <Logo />
         </Link>
@@ -20,7 +20,7 @@ export function AppShell({ children, email }: { children: ReactNode; email: stri
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-border bg-surface flex h-12 items-center justify-between border-b px-4 md:hidden">
+        <header className="border-ink bg-surface flex h-12 items-center justify-between border-b-2 px-4 md:hidden">
           <Link href="/world">
             <Logo />
           </Link>

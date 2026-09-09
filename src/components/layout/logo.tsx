@@ -1,3 +1,4 @@
+import { PIXEL_PALETTE } from "@/config/pixel-palette";
 import { t } from "@/lib/i18n";
 
 /**
@@ -16,14 +17,14 @@ export function Logo({ compact = false }: { compact?: boolean }) {
         shapeRendering="crispEdges"
       >
         {/* Walls: left face lit, right face in shadow. */}
-        <path d="M2 11 L11 16 L11 21 L2 16 Z" fill="#e7d8bf" />
-        <path d="M20 11 L11 16 L11 21 L20 16 Z" fill="#c8b593" />
+        <path d="M2 11 L11 16 L11 21 L2 16 Z" fill={PIXEL_PALETTE.wall} />
+        <path d="M20 11 L11 16 L11 21 L20 16 Z" fill={PIXEL_PALETTE.wallDark} />
         {/* Hip roof, right slope darker, over a 1 px outline. */}
-        <path d="M11 2 L21 8 L11 14 L1 8 Z" fill="#b8433a" />
-        <path d="M11 2 L21 8 L11 14 Z" fill="#8e332c" />
+        <path d="M11 2 L21 8 L11 14 L1 8 Z" fill={PIXEL_PALETTE.roof} />
+        <path d="M11 2 L21 8 L11 14 Z" fill={PIXEL_PALETTE.roofDark} />
         {/* Door and a lit window. */}
-        <path d="M8 15 L10 16 L10 20 L8 19 Z" fill="#8a6a45" />
-        <path d="M14 15 L16 14 L16 17 L14 18 Z" fill="#f2c96b" />
+        <path d="M8 15 L10 16 L10 20 L8 19 Z" fill={PIXEL_PALETTE.wood} />
+        <path d="M14 15 L16 14 L16 17 L14 18 Z" fill={PIXEL_PALETTE.windowLit} />
       </svg>
       {compact ? null : <span>{t("app.name")}</span>}
     </span>

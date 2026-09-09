@@ -101,7 +101,7 @@ export function BuildingDetailPanel({
           </div>
         </div>
         {linkedLiabilities.length > 0 ? (
-          <div className="border-border bg-surface-2 flex flex-col gap-1 rounded-md border p-3 text-sm">
+          <div className="border-ink bg-surface-2 flex flex-col gap-1 rounded-md border-2 p-3 text-sm">
             <p className="text-fg-muted text-xs tracking-wide uppercase">{t("world.linkedDebt")}</p>
             {linkedLiabilities.map((l) => (
               <div key={l.id} className="flex justify-between gap-3">

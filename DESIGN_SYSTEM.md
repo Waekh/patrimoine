@@ -11,9 +11,20 @@ bord générique.
   ou en dérivent. Le contraste WCAG AA est vérifié par `src/app/globals.test.ts`,
   qui lit les tokens directement dans la feuille de style.
 - Aucun angle arrondi sur les contrôles et aucun flou : le monde n'en a pas non
-  plus. Les rayons valent 0, la classe `.hard-shadow` décale l'ombre de 2 px sans
-  la flouter, et `.pressable` déplace l'élément sur son ombre à l'activation.
-- Bordures de 2 px en `--color-ink`, la teinte du contour des sprites.
+  plus. Les rayons valent 0 et aucune ombre n'a de rayon de flou.
+- **Deux repères de profondeur, jamais mélangés.** Ce qui se clique est en
+  relief : `.hard-shadow` décale l'ombre de 2 px, `.pressable` déplace l'élément
+  sur son ombre à l'activation. Ce qui se remplit est en creux : `.sunken` porte
+  la même ombre vers l'intérieur. Boutons, cartes, panneaux et blocs d'options
+  sont en relief ; champs, listes déroulantes et barres de progression en creux.
+- Bordures de 2 px en `--color-ink`, la teinte du contour des sprites, pour tout
+  bloc autonome. Le trait fin `--color-border` ne sert plus qu'aux séparateurs
+  internes.
+- Rien de continu : la barre de progression est faite de blocs, la répartition
+  patrimoniale a des bouts droits, le témoin de chargement est une marquise de
+  trois carrés et non un anneau qui tourne, et `.blink` clignote en deux états
+  au lieu de fondre.
+- Les icônes ont un trait de 2 px à bouts carrés et `shapeRendering: crispEdges`.
 - Typographie nette, hiérarchie claire, espaces blancs. La police reste Geist :
   une police bitmap serait illisible en corps de texte. Le pixel n'est utilisé
   que dans la scène, où `font_5x7` dessine les enseignes.

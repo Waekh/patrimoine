@@ -9,9 +9,12 @@ function base({ size = 18, ...rest }: IconProps) {
     viewBox: "0 0 24 24",
     fill: "none",
     stroke: "currentColor",
-    strokeWidth: 1.75,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
+    // Square caps and crisp edges: rounded, anti-aliased strokes were the last
+    // thing in the interface that did not belong next to the pixel world.
+    strokeWidth: 2,
+    strokeLinecap: "square" as const,
+    strokeLinejoin: "miter" as const,
+    shapeRendering: "crispEdges" as const,
     "aria-hidden": true,
     ...rest,
   };

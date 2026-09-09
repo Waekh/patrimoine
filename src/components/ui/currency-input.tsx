@@ -62,7 +62,7 @@ export function CurrencyInput({
         aria-invalid={invalid || (display !== "" && cents == null) || undefined}
         aria-describedby={describedBy}
         placeholder={digits === 0 ? "0" : "0,00"}
-        className="tabular border-border bg-surface focus:border-focus aria-[invalid=true]:border-negative h-10 w-full rounded-md border pr-12 pl-3 font-mono text-sm disabled:opacity-60"
+        className="tabular border-ink bg-surface sunken focus:border-focus aria-[invalid=true]:border-negative h-10 w-full rounded-md border-2 pr-12 pl-3 font-mono text-sm disabled:opacity-60"
       />
       <span
         aria-hidden="true"

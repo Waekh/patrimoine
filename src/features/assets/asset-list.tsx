@@ -30,7 +30,7 @@ export function AssetList({
     );
   }
   return (
-    <div className="border-border bg-surface overflow-x-auto rounded-lg border">
+    <div className="border-ink bg-surface hard-shadow overflow-x-auto rounded-lg border-2">
       <table className="w-full min-w-[640px] text-sm">
         <thead className="bg-surface-2 text-fg-muted text-left text-xs tracking-wide uppercase">
           <tr>

@@ -11,7 +11,7 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
       <Link href="/" className="mb-8">
         <Logo />
       </Link>
-      <main className="border-border bg-surface w-full max-w-sm rounded-lg border p-6">
+      <main className="border-ink bg-surface hard-shadow w-full max-w-sm rounded-lg border-2 p-6">
         {children}
       </main>
       <p className="text-fg-muted mt-8 max-w-sm text-center text-xs">{t("app.disclaimer")}</p>

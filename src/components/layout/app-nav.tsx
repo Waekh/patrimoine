@@ -49,7 +49,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Navigation principale"
-      className="border-border bg-surface fixed inset-x-0 bottom-0 z-30 flex border-t pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="border-ink bg-surface fixed inset-x-0 bottom-0 z-30 flex border-t-2 pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       {items.slice(0, 5).map((item) => {
         const Icon = Icons[item.icon];

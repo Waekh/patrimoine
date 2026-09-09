@@ -16,7 +16,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "border-border flex flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-10 text-center",
+        "border-ink flex flex-col items-center gap-3 rounded-lg border-2 border-dashed px-6 py-10 text-center",
         className,
       )}
     >
@@ -40,7 +40,7 @@ export function ErrorState({
     <div
       role="alert"
       className={cn(
-        "border-border bg-surface flex flex-col items-start gap-3 rounded-lg border p-4",
+        "border-ink bg-surface hard-shadow flex flex-col items-start gap-3 rounded-lg border-2 p-4",
         className,
       )}
     >
@@ -59,10 +59,11 @@ export function ErrorState({
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return (
-    <div aria-hidden="true" className={cn("bg-surface-2 animate-pulse rounded-md", className)} />
-  );
+  return <div aria-hidden="true" className={cn("bg-surface-2 blink rounded-md", className)} />;
 }
+
+/** Blocks in the progress bar. Twenty reads as a bar without becoming a line. */
+const PROGRESS_SEGMENTS = 20;
 
 export function Progress({ value, max, label }: { value: number; max: number; label: string }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
@@ -72,18 +73,30 @@ export function Progress({ value, max, label }: { value: number; max: number; la
         <span>{label}</span>
         <span className="tabular">{pct} %</span>
       </div>
+      {/*
+        Segmented rather than a smooth fill: a continuous bar is the one shape
+        in the interface a pixel world cannot draw. Each block is a whole step,
+        so the bar advances in jumps like the rest of the chrome.
+      */}
       <div
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={max}
         aria-valuenow={value}
         aria-label={label}
-        className="bg-surface-2 h-1.5 w-full overflow-hidden rounded-full"
+        className="border-ink sunken flex h-4 w-full gap-0.5 border-2 p-0.5"
       >
-        <div
-          className="bg-accent h-full transition-[width] duration-200"
-          style={{ width: `${pct}%` }}
-        />
+        {Array.from({ length: PROGRESS_SEGMENTS }, (_, index) => (
+          <span
+            key={index}
+            aria-hidden="true"
+            className={
+              index < Math.round((pct / 100) * PROGRESS_SEGMENTS)
+                ? "bg-accent flex-1"
+                : "bg-surface-2 flex-1"
+            }
+          />
+        ))}
       </div>
     </div>
   );
@@ -98,16 +111,18 @@ export function Notice({
   tone?: "info" | "warning" | "success" | "error";
   className?: string;
 }) {
+  // Solid borders rather than a translucent tint: a faded edge is a blur by
+  // another name, and the palette has no such thing.
   const tones = {
-    info: "border-border bg-surface-2 text-fg",
-    warning: "border-warning/40 bg-surface text-warning",
-    success: "border-positive/40 bg-surface text-positive",
-    error: "border-negative/40 bg-surface text-negative",
+    info: "border-ink bg-surface-2 text-fg",
+    warning: "border-warning bg-surface text-warning",
+    success: "border-positive bg-surface text-positive",
+    error: "border-negative bg-surface text-negative",
   };
   return (
     <div
       role={tone === "error" ? "alert" : "status"}
-      className={cn("rounded-md border px-3 py-2 text-sm", tones[tone], className)}
+      className={cn("rounded-md border-2 px-3 py-2 text-sm", tones[tone], className)}
     >
       {children}
     </div>

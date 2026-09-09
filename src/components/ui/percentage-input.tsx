@@ -47,7 +47,7 @@ export function PercentageInput({
         aria-invalid={invalid || (display !== "" && bps == null) || undefined}
         aria-describedby={describedBy}
         placeholder="0,00"
-        className="tabular border-border bg-surface focus:border-focus aria-[invalid=true]:border-negative h-10 w-full rounded-md border pr-8 pl-3 font-mono text-sm"
+        className="tabular border-ink bg-surface sunken focus:border-focus aria-[invalid=true]:border-negative h-10 w-full rounded-md border-2 pr-8 pl-3 font-mono text-sm"
       />
       <span
         aria-hidden="true"

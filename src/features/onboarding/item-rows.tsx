@@ -26,7 +26,7 @@ export function ItemRows<T>({
       {rows.map((row, index) => (
         <div
           key={row.key}
-          className="border-border bg-surface flex flex-col gap-4 rounded-md border p-4"
+          className="border-ink bg-surface hard-shadow flex flex-col gap-4 rounded-md border-2 p-4"
         >
           {render(row.item, `items.${index}`, index)}
           {rows.length > 1 ? (

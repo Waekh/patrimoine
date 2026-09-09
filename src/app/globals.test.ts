@@ -100,6 +100,19 @@ describe("shape language", () => {
     expect(css).toMatch(/--radius-md:\s*0px/);
   });
 
+  it("recesses inputs with an inset offset, never a blur", () => {
+    const shadow = css.match(/\.sunken\s*\{[^}]*box-shadow:\s*([^;]+);/)?.[1] ?? "";
+    expect(shadow).toContain("inset");
+    expect(shadow).toContain("var(--ink)");
+    // Third length is the blur radius: it must stay at zero.
+    expect(shadow.trim()).toMatch(/^inset 2px 2px 0/);
+  });
+
+  it("blinks in whole steps rather than fading", () => {
+    const blink = css.match(/\.blink\s*\{[^}]*animation:\s*([^;]+);/)?.[1] ?? "";
+    expect(blink).toContain("steps(");
+  });
+
   it("offsets shadows instead of blurring them", () => {
     const shadow = css.match(/\.hard-shadow\s*\{[^}]*box-shadow:\s*([^;]+);/)?.[1] ?? "";
     expect(shadow).toContain("var(--ink)");

@@ -118,7 +118,7 @@ export function AssetForm({ asset, defaultCategory }: AssetFormProps) {
       </Field>
 
       {marketCapable ? (
-        <fieldset className="border-border flex flex-col gap-4 rounded-md border p-4">
+        <fieldset className="border-ink flex flex-col gap-4 rounded-md border-2 p-4">
           <legend className="px-1 text-sm font-medium">{t("assets.valuationType")}</legend>
           <Field id="valuationType" label={t("assets.valuationType")} error={fe.valuationType}>
             <Select
@@ -171,7 +171,7 @@ export function AssetForm({ asset, defaultCategory }: AssetFormProps) {
       )}
 
       {isRealEstate ? (
-        <fieldset className="border-border flex flex-col gap-4 rounded-md border p-4">
+        <fieldset className="border-ink flex flex-col gap-4 rounded-md border-2 p-4">
           <legend className="px-1 text-sm font-medium">
             {messages.assets.categories.REAL_ESTATE}
           </legend>

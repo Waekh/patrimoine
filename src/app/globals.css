@@ -107,9 +107,42 @@ body {
   box-shadow: none;
 }
 
+/*
+ * Controls you type into read as sunken rather than raised: the same hard
+ * offset, cast inwards. It is the only depth cue the interface uses besides
+ * `.hard-shadow`, so raised and recessed never get confused.
+ */
+.sunken {
+  box-shadow: inset 2px 2px 0 0 color-mix(in srgb, var(--ink) 26%, transparent);
+}
+
+/* Crisp SVG: the world has no anti-aliased edge, and neither do the icons. */
+.pixel-edges {
+  shape-rendering: crispEdges;
+}
+
+/* Two-state blink instead of a smooth pulse, the way a 16-bit loader behaves. */
+@keyframes pixel-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.35;
+  }
+}
+
+.blink {
+  animation: pixel-blink 900ms steps(1, end) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pressable:not(:disabled):active {
     transform: none;
+  }
+  .blink {
+    animation: none;
   }
 }
 
