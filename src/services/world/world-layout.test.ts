@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { layoutWorld, validateLayout, zIndexOf } from "./world-layout";
 import { mapAssetsToWorldEntities } from "./wealth-to-world";
 import type { WorldBuilding, WorldEntity } from "@/types/world";
+import { headingBetween } from "@/config/sprites";
 
 const entities = mapAssetsToWorldEntities([
   {
@@ -151,6 +152,51 @@ describe("WorldLayoutEngine", () => {
     expect(() => validateLayout(20, [first, { ...first, id: "dup" }], [], r.terrain)).toThrow(
       /Chevauchement/,
     );
+  });
+
+  it("fait circuler les voitures à droite, dans les quatre sens", () => {
+    const road = 10;
+    const { vehicles } = layoutWorld(entities, { mapSize: road * 2, seed: 7, cityLevel: 3 });
+    const moving = vehicles.filter((v) => v.periodMs > 0);
+    const headings = new Set(moving.map((v) => v.spriteId.split("_").at(-1)));
+    expect(headings).toEqual(new Set(["north", "east", "south", "west"]));
+
+    for (const car of moving) {
+      const heading = headingBetween(car.from, car.to);
+      expect(car.spriteId.endsWith(`_${heading}`), car.spriteId).toBe(true);
+      // Right-hand traffic: each heading keeps the lane on its right.
+      const lane = heading === "east" || heading === "west" ? car.from.y : car.from.x;
+      const expectedLane = heading === "east" || heading === "north" ? road + 1 : road;
+      expect(lane, `${car.id} ${heading}`).toBe(expectedLane);
+    }
+  });
+
+  it("échelonne les voitures d'une même voie sur toute sa longueur", () => {
+    const { vehicles } = layoutWorld(entities, { mapSize: 20, seed: 7, cityLevel: 3 });
+    const lanes = new Map<string, number[]>();
+    for (const car of vehicles.filter((v) => v.periodMs > 0)) {
+      const heading = headingBetween(car.from, car.to);
+      lanes.set(heading, [...(lanes.get(heading) ?? []), car.phaseMs / car.periodMs]);
+    }
+    expect(lanes.size).toBe(4);
+    for (const [heading, laps] of lanes) {
+      const sorted = [...laps].sort((a, b) => a - b);
+      for (let i = 1; i < sorted.length; i += 1)
+        expect(sorted[i]! - sorted[i - 1]!, heading).toBeGreaterThanOrEqual(1 / sorted.length - 1e-9);
+    }
+  });
+
+  it("gare les voitures hors des voies de circulation", () => {
+    const road = 10;
+    const { vehicles } = layoutWorld(entities, { mapSize: road * 2, seed: 7, cityLevel: 3 });
+    const parked = vehicles.filter((v) => v.periodMs === 0);
+    expect(parked.length).toBeGreaterThan(0);
+    for (const car of parked) {
+      const across = Number.isInteger(car.from.x) ? car.from.y : car.from.x;
+      expect(Number.isInteger(across), car.id).toBe(false);
+      // Clear of both lanes of the road it stands beside.
+      expect(Math.min(Math.abs(across - road), Math.abs(across - (road + 1)))).toBeGreaterThan(0.5);
+    }
   });
 
   it("orders back to front", () => {

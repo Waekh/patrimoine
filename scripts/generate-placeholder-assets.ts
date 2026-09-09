@@ -30,6 +30,14 @@ import {
   signBoardY,
 } from "../src/config/pixel-font";
 import { buildFontAtlas, drawGlyph } from "./lib/font";
+import { CAR_BODY_SWATCHES, CAR_PALETTE, CAR_SPRITES } from "./lib/car-sprite-data";
+import {
+  CAR_COLOURS,
+  CAR_HEADINGS,
+  carSpriteId,
+  type CarColour,
+  type CarHeading,
+} from "../src/config/sprites";
 
 /**
  * Generates PLACEHOLDER pixel-art sprites that respect the Pixel Art Bible
@@ -44,6 +52,19 @@ const OUTLINE = hex(PIXEL_PALETTE.outline);
 /** A facade shorter than this has no clear band of wall to carry an emblem. */
 const EMBLEM_MIN_HEIGHT = 34;
 const SHADOW = hex(PIXEL_PALETTE.shadow, 90);
+/** Ground shadow under a car, and the apron of canvas that has to hold it. */
+const CAR_SHADOW_W = 42;
+const CAR_SHADOW_H = 21;
+const CAR_SHADOW_APRON = 6;
+/**
+ * Body colour per variant, as a rotation of the reference blue. One set of
+ * pixels rotated three ways keeps the modelling identical on every car.
+ */
+const CAR_BODY_ROTATION: Record<CarColour, { degrees: number; saturation: number } | null> = {
+  blue: null,
+  red: { degrees: 145, saturation: 1 },
+  sand: { degrees: 175, saturation: 0.42 },
+};
 
 interface ManifestEntry {
   id: string;
@@ -55,17 +76,20 @@ interface ManifestEntry {
   height: number;
   anchor: { x: number; y: number };
   footprint?: { w: number; h: number };
-  placeholder: true;
+  placeholder: boolean;
 }
 
 const entries: ManifestEntry[] = [];
 const canvases = new Map<string, PixelCanvas>();
 
-function save(entry: Omit<ManifestEntry, "placeholder">, canvas: PixelCanvas): void {
+function save(
+  entry: Omit<ManifestEntry, "placeholder"> & { placeholder?: boolean },
+  canvas: PixelCanvas,
+): void {
   const file = path.join(OUT_DIR, entry.file);
   mkdirSync(path.dirname(file), { recursive: true });
   writeFileSync(file, canvas.toPng());
-  entries.push({ ...entry, placeholder: true });
+  entries.push({ ...entry, placeholder: entry.placeholder ?? true });
   canvases.set(entry.id, canvas);
 }
 
@@ -1236,167 +1260,105 @@ function signSprite(id: string, postHeight: number): void {
 }
 
 /**
- * Car on the isometric grid, drawn as a single body volume with the glazing
- * painted onto it. Earlier attempts stacked a cabin box on a chassis box; the
- * outline around that second volume read as a crate strapped to the roof, which
- * is what made the sprites look like tanks. A real car has one continuous shell
- * and a dark glasshouse sunk into its upper half.
- *
- * `axis` is the road the car drives along: "x" runs down-right on screen, "y"
- * down-left. Both are drawn rather than mirrored, so the light keeps coming
- * from the top left in either direction.
+ * Cars. The four orientations are the reference art supplied by the product
+ * owner, reduced to the pixel grid in `lib/car-sprite-data` and blitted here;
+ * nothing about the shape is procedural any more. The generator's job is to
+ * lay the ground shadow, recolour the body, and register the sprite.
  */
-function carSprite(id: string, body: RGBA, axis: "x" | "y"): void {
-  const W = 46;
-  const H = 34;
-  const c = new PixelCanvas(W, H);
-  // Steps of the two ground axes, in screen pixels.
-  const len = axis === "x" ? { x: 2, y: 1 } : { x: -2, y: 1 };
-  const wid = axis === "x" ? { x: -2, y: 1 } : { x: 2, y: 1 };
-  /** Car footprint in grid units, and the two heights that matter. */
-  const LEN = 10;
-  const WID = 6;
-  /** Sills sit above the ground, which is what lets the wheels show. */
-  const SILL = 2;
-  const BELT = 8;
-  const ox = W / 2 - (len.x * LEN + wid.x * WID) / 2;
-  const oy = 10 + BELT - (len.y * LEN + wid.y * WID) / 2;
-  /** Point at `a` steps along the car, `b` across it, `lift` px above ground. */
-  const P = (a: number, b: number, lift = 0): [number, number] => [
-    Math.round(ox + len.x * a + wid.x * b),
-    Math.round(oy + len.y * a + wid.y * b - lift),
-  ];
+function carSprite(colour: CarColour, heading: CarHeading): void {
+  const art = CAR_SPRITES[heading];
+  const palette = carPalette(colour);
+  // A few rows of apron below the art so the ground shadow is not clipped.
+  const H = art.height + CAR_SHADOW_APRON;
+  const c = new PixelCanvas(art.width, H);
 
-  // Plan of the shell: a hexagon, so the nose and tail taper.
-  const plan: Array<[number, number]> = [
-    [10, 1.9],
-    [10, 4.1],
-    [9, 4.9],
-    [1, 4.9],
-    [0, 4.1],
-    [0, 1.9],
-    [1, 1.1],
-    [9, 1.1],
-  ];
-  // The flank faces one ground axis and the nose the other, so which of the two
-  // catches the light depends on the direction the car drives in.
-  const lit = axis === "x" ? body : shade(body, 0.68);
-  const dark = axis === "x" ? shade(body, 0.68) : body;
-  const glass = hex(PIXEL_PALETTE.windowDark);
-
-  const wall = (i: number, j: number, from: number, to: number, tone: RGBA) => {
-    const [a1, b1] = plan[i]!;
-    const [a2, b2] = plan[j]!;
-    c.fillPolygon([P(a1, b1, to), P(a2, b2, to), P(a2, b2, from), P(a1, b1, from)], tone);
-  };
-
-  c.fillPolygon([P(11, 3), P(5, 7.2), P(-1, 3), P(5, -1.2)], SHADOW);
-
-  // Wheels before the shell: the sills then cut across their upper half.
-  for (const a of [2.4, 7.6]) {
-    const [wx, wy] = P(a, 4.7, SILL);
-    c.fillRect(wx - 2, wy - 1, 5, 5, OUTLINE);
-    c.fillRect(wx - 3, wy, 7, 3, OUTLINE);
-    c.fillRect(wx - 1, wy + 1, 3, 1, shade(hex(PIXEL_PALETTE.metal), 0.6));
-  }
-
-  // Only the four walls that face the camera are painted; the others would
-  // spill colour outside the silhouette.
-  wall(0, 1, SILL, BELT, dark);
-  wall(1, 2, SILL, BELT, shade(dark, 1.12));
-  wall(2, 3, SILL, BELT, lit);
-  wall(3, 4, SILL, BELT, shade(lit, 0.88));
   c.fillPolygon(
-    plan.map(([a, b]) => P(a, b, BELT)),
-    shade(body, 1.32),
+    diamond(art.anchor.x, art.anchor.y, CAR_SHADOW_W, CAR_SHADOW_H),
+    SHADOW,
   );
 
-  // Glasshouse, painted on the shell: roof glazing, windscreen reflection, and
-  // a band of side windows down the near flank.
-  const glazing: Array<[number, number]> = [
-    [7.2, 1.8],
-    [7.2, 4.2],
-    [6.6, 4.6],
-    [3.4, 4.6],
-    [2.9, 4.2],
-    [2.9, 1.8],
-    [3.4, 1.4],
-    [6.6, 1.4],
-  ];
-  c.fillPolygon(
-    glazing.map(([a, b]) => P(a, b, BELT)),
-    glass,
-  );
-  c.fillPolygon(
-    [P(7.2, 1.8, BELT), P(7.2, 4.2, BELT), P(6.4, 4.2, BELT), P(6.4, 1.8, BELT)],
-    shade(glass, 1.7),
-  );
-  c.fillPolygon(
-    [P(6.9, 4.9, BELT), P(3.3, 4.9, BELT), P(3.3, 4.9, BELT - 3), P(6.9, 4.9, BELT - 3)],
-    shade(glass, 1.15),
-  );
-
-  const ring = (points: ReadonlyArray<readonly [number, number]>, lift: number) => {
-    for (let i = 0; i < points.length; i += 1) {
-      const [a1, b1] = points[i]!;
-      const [a2, b2] = points[(i + 1) % points.length]!;
-      const p = P(a1, b1, lift);
-      const q = P(a2, b2, lift);
-      c.line(p[0], p[1], q[0], q[1], OUTLINE);
+  art.rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x += 1) {
+      const ch = row[x]!;
+      if (ch === ".") continue;
+      c.set(x, y, palette[Number.parseInt(ch, 16)]!);
     }
-  };
-  ring(plan, BELT);
-  ring(glazing, BELT);
-  // Sills and the two vertical edges that bound the visible silhouette.
-  for (const [i, j] of [
-    [0, 1],
-    [1, 2],
-    [2, 3],
-    [3, 4],
-  ] as const) {
-    const [a1, b1] = plan[i]!;
-    const [a2, b2] = plan[j]!;
-    const p = P(a1, b1, SILL);
-    const q = P(a2, b2, SILL);
-    c.line(p[0], p[1], q[0], q[1], OUTLINE);
-  }
-  for (const i of [0, 4]) {
-    const [a, b] = plan[i]!;
-    const p = P(a, b, SILL);
-    const q = P(a, b, BELT);
-    c.line(p[0], p[1], q[0], q[1], OUTLINE);
-  }
-
-  const [hx, hy] = P(10, 3.7, BELT - 2);
-  c.fillRect(hx - 2, hy, 2, 2, hex(PIXEL_PALETTE.windowLit));
-  const [tx, ty] = P(0.2, 3.7, BELT - 2);
-  c.fillRect(tx, ty, 2, 2, hex(PIXEL_PALETTE.roof));
+  });
 
   save(
     {
-      id,
+      id: carSpriteId(colour, heading),
       type: "decoration",
-      file: `world/vehicles/${id}.png`,
-      width: W,
+      file: `world/vehicles/${carSpriteId(colour, heading)}.png`,
+      width: art.width,
       height: H,
-      anchor: { x: W / 2, y: oy + (len.y * LEN + wid.y * WID) / 2 },
+      anchor: { x: art.anchor.x, y: art.anchor.y },
       footprint: { w: 1, h: 1 },
+      placeholder: false,
     },
     c,
   );
 }
 
-function generateVehicles(): void {
-  const colours = [
-    ["red", PIXEL_PALETTE.roof],
-    ["blue", PIXEL_PALETTE.water],
-    ["sand", PIXEL_PALETTE.concrete],
-  ] as const;
-  for (const [name, colour] of colours) {
-    // `_x` drives along the grid x axis (down-right on screen), `_y` along y.
-    carSprite(`car_${name}_x`, hex(colour), "x");
-    carSprite(`car_${name}_y`, hex(colour), "y");
+/**
+ * Colour variants of the one car. Only the body swatches are rotated: the
+ * glazing, wheels, lamps and outline are the same parts on every car, and
+ * rotating them turned the windows green.
+ */
+function carPalette(colour: CarColour): RGBA[] {
+  const rotation = CAR_BODY_ROTATION[colour];
+  return CAR_PALETTE.map((swatch, index) => {
+    const rgba = hex(swatch);
+    if (!rotation || !CAR_BODY_SWATCHES.includes(index as (typeof CAR_BODY_SWATCHES)[number]))
+      return rgba;
+    return rotateHue(rgba, rotation.degrees, rotation.saturation);
+  });
+}
+
+/** Hue rotation at constant lightness, so the body keeps its modelling. */
+function rotateHue(rgba: RGBA, degrees: number, saturationFactor: number): RGBA {
+  const [r, g, b, a] = rgba;
+  const max = Math.max(r, g, b) / 255;
+  const min = Math.min(r, g, b) / 255;
+  const lightness = (max + min) / 2;
+  const delta = max - min;
+  let hue = 0;
+  if (delta > 0) {
+    const [R, G, B] = [r / 255, g / 255, b / 255];
+    hue =
+      max === R ? ((G - B) / delta) % 6 : max === G ? (B - R) / delta + 2 : (R - G) / delta + 4;
+    hue *= 60;
   }
+  hue = (hue + degrees + 360) % 360;
+  const saturation = Math.min(
+    1,
+    (delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1))) * saturationFactor,
+  );
+  const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+  const second = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
+  const offset = lightness - chroma / 2;
+  const [R, G, B] =
+    hue < 60
+      ? [chroma, second, 0]
+      : hue < 120
+        ? [second, chroma, 0]
+        : hue < 180
+          ? [0, chroma, second]
+          : hue < 240
+            ? [0, second, chroma]
+            : hue < 300
+              ? [second, 0, chroma]
+              : [chroma, 0, second];
+  return [
+    Math.round((R + offset) * 255),
+    Math.round((G + offset) * 255),
+    Math.round((B + offset) * 255),
+    a,
+  ];
+}
+
+function generateVehicles(): void {
+  for (const colour of CAR_COLOURS) for (const heading of CAR_HEADINGS) carSprite(colour, heading);
 }
 
 /**

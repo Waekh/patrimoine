@@ -943,100 +943,196 @@
       "placeholder": true
     },
     {
-      "id": "car_red_x",
+      "id": "car_blue_north",
       "type": "decoration",
-      "file": "world/vehicles/car_red_x.png",
-      "width": 46,
-      "height": 34,
+      "file": "world/vehicles/car_blue_north.png",
+      "width": 52,
+      "height": 41,
       "anchor": {
-        "x": 23,
-        "y": 18
+        "x": 25,
+        "y": 29
       },
       "footprint": {
         "w": 1,
         "h": 1
       },
-      "placeholder": true
+      "placeholder": false
     },
     {
-      "id": "car_red_y",
+      "id": "car_blue_east",
       "type": "decoration",
-      "file": "world/vehicles/car_red_y.png",
-      "width": 46,
-      "height": 34,
+      "file": "world/vehicles/car_blue_east.png",
+      "width": 52,
+      "height": 43,
       "anchor": {
-        "x": 23,
-        "y": 18
+        "x": 26,
+        "y": 30
       },
       "footprint": {
         "w": 1,
         "h": 1
       },
-      "placeholder": true
+      "placeholder": false
     },
     {
-      "id": "car_blue_x",
+      "id": "car_blue_south",
       "type": "decoration",
-      "file": "world/vehicles/car_blue_x.png",
-      "width": 46,
-      "height": 34,
+      "file": "world/vehicles/car_blue_south.png",
+      "width": 50,
+      "height": 44,
       "anchor": {
-        "x": 23,
-        "y": 18
+        "x": 26,
+        "y": 31
       },
       "footprint": {
         "w": 1,
         "h": 1
       },
-      "placeholder": true
+      "placeholder": false
     },
     {
-      "id": "car_blue_y",
+      "id": "car_blue_west",
       "type": "decoration",
-      "file": "world/vehicles/car_blue_y.png",
-      "width": 46,
-      "height": 34,
+      "file": "world/vehicles/car_blue_west.png",
+      "width": 51,
+      "height": 41,
       "anchor": {
-        "x": 23,
-        "y": 18
+        "x": 26,
+        "y": 28
       },
       "footprint": {
         "w": 1,
         "h": 1
       },
-      "placeholder": true
+      "placeholder": false
     },
     {
-      "id": "car_sand_x",
+      "id": "car_red_north",
       "type": "decoration",
-      "file": "world/vehicles/car_sand_x.png",
-      "width": 46,
-      "height": 34,
+      "file": "world/vehicles/car_red_north.png",
+      "width": 52,
+      "height": 41,
       "anchor": {
-        "x": 23,
-        "y": 18
+        "x": 25,
+        "y": 29
       },
       "footprint": {
         "w": 1,
         "h": 1
       },
-      "placeholder": true
+      "placeholder": false
     },
     {
-      "id": "car_sand_y",
+      "id": "car_red_east",
       "type": "decoration",
-      "file": "world/vehicles/car_sand_y.png",
-      "width": 46,
-      "height": 34,
+      "file": "world/vehicles/car_red_east.png",
+      "width": 52,
+      "height": 43,
       "anchor": {
-        "x": 23,
-        "y": 18
+        "x": 26,
+        "y": 30
       },
       "footprint": {
         "w": 1,
         "h": 1
       },
-      "placeholder": true
+      "placeholder": false
+    },
+    {
+      "id": "car_red_south",
+      "type": "decoration",
+      "file": "world/vehicles/car_red_south.png",
+      "width": 50,
+      "height": 44,
+      "anchor": {
+        "x": 26,
+        "y": 31
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": false
+    },
+    {
+      "id": "car_red_west",
+      "type": "decoration",
+      "file": "world/vehicles/car_red_west.png",
+      "width": 51,
+      "height": 41,
+      "anchor": {
+        "x": 26,
+        "y": 28
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": false
+    },
+    {
+      "id": "car_sand_north",
+      "type": "decoration",
+      "file": "world/vehicles/car_sand_north.png",
+      "width": 52,
+      "height": 41,
+      "anchor": {
+        "x": 25,
+        "y": 29
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": false
+    },
+    {
+      "id": "car_sand_east",
+      "type": "decoration",
+      "file": "world/vehicles/car_sand_east.png",
+      "width": 52,
+      "height": 43,
+      "anchor": {
+        "x": 26,
+        "y": 30
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": false
+    },
+    {
+      "id": "car_sand_south",
+      "type": "decoration",
+      "file": "world/vehicles/car_sand_south.png",
+      "width": 50,
+      "height": 44,
+      "anchor": {
+        "x": 26,
+        "y": 31
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": false
+    },
+    {
+      "id": "car_sand_west",
+      "type": "decoration",
+      "file": "world/vehicles/car_sand_west.png",
+      "width": 51,
+      "height": 41,
+      "anchor": {
+        "x": 26,
+        "y": 28
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "placeholder": false
     },
     {
       "id": "character_basic",

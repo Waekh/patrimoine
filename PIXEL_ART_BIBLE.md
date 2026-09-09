@@ -28,6 +28,7 @@ règles n'entre pas dans le manifest.
 | Maison (lv1‑5)     | 64      | 64–96       | 1 × 1          |
 | Banque / financier | 64–128  | 96–128      | 1 × 1 à 2 × 2  |
 | Immeuble           | 64–128  | 96–160      | 1 × 1 à 2 × 2  |
+| Voiture            | 50–52   | 41–44       | 1 × 1          |
 
 Le point d'ancrage d'un sprite est le **centre du losange de base**
 (`anchor.x = largeur / 2`, `anchor.y = hauteur − 16` pour une emprise 1 × 1).
@@ -143,14 +144,34 @@ jamais par une police système, qui serait lissée au milieu de pixels nets.
 Un bâtiment de niveau supérieur est plus haut et/ou plus large, jamais d'un
 autre style. Les niveaux 1 à 5 partagent la même base et la même palette.
 
-## 9. Placeholders
+## 9. Véhicules
 
-Les sprites actuels sont **générés par script** (`scripts/generate-placeholder-assets.ts`)
-et portent `"placeholder": true` dans le manifest. Ils respectent la
-projection, l'échelle, la palette et l'ancrage, et servent de gabarit pour les
-assets finaux. Un placeholder n'est jamais présenté comme un asset final.
+Une voiture existe en **quatre orientations**, une par sens de circulation :
+`north` (vers le haut à droite), `east` (bas droite), `south` (bas gauche),
+`west` (haut gauche). Aucune orientation n'est obtenue par symétrie : la
+lumière du monde vient du haut à gauche, un miroir la ferait venir du mauvais
+côté.
 
-## 10. Manifest (`public/assets/asset-manifest.json`)
+Les pixels sont dans `scripts/lib/car-sprite-data.ts` (planche indexée, une
+palette de quatorze teintes propre aux véhicules). Le générateur ne fait que
+poser l'ombre au sol, recolorer la carrosserie et enregistrer le sprite. Les
+déclinaisons rouge et sable sont des rotations de teinte des seules cases de
+carrosserie : vitrage, roues, feux et contour restent identiques, sans quoi les
+vitres viraient au vert.
+
+L'ancrage d'une voiture n'est pas la formule générale : c'est le point de
+contact au sol mesuré sur l'art de référence, ce qui garantit que les quatre
+orientations posent la voiture au même endroit de la tuile.
+
+## 10. Placeholders
+
+Les sprites **générés par script** (`scripts/generate-placeholder-assets.ts`)
+portent `"placeholder": true` dans le manifest. Ils respectent la projection,
+l'échelle, la palette et l'ancrage, et servent de gabarit pour les assets
+finaux. Un placeholder n'est jamais présenté comme un asset final. Les
+voitures, qui viennent d'un art de référence, portent `false`.
+
+## 11. Manifest (`public/assets/asset-manifest.json`)
 
 ```json
 {

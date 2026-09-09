@@ -1,6 +1,12 @@
 import { DISTRICT_IDS, type DistrictId } from "@/config/districts";
-import { PARK_FOOTPRINT } from "@/config/sprites";
-import { SPRITE_IDS } from "@/config/sprites";
+import {
+  CAR_COLOURS,
+  PARK_FOOTPRINT,
+  SPRITE_IDS,
+  carSpriteId,
+  headingBetween,
+  type CarHeading,
+} from "@/config/sprites";
 import type {
   DistrictArea,
   Footprint,
@@ -415,51 +421,63 @@ function doorOf(building: WorldBuilding): GridPosition {
   };
 }
 
+/** Cars per lane, spread evenly along it. */
+const CARS_PER_LANE = 2;
+
 /**
- * Traffic on the central crossroads: a couple of cars driving the length of
- * each road, plus a few parked along the outer lane. Cars stay on the road
- * tiles, which nothing else ever occupies.
+ * Traffic on the central crossroads. Each road is two tiles wide, so it carries
+ * one lane per direction; cars drive on the right, which is what decides which
+ * tile belongs to which heading. Parked cars sit half on the verge, clear of
+ * both lanes.
  */
 function placeVehicles(mapSize: number, random: () => number): WorldVehicle[] {
   const road = Math.floor(mapSize / 2);
   const vehicles: WorldVehicle[] = [];
-  const pick = (axis: "x" | "y") => {
-    const ids = SPRITE_IDS.cars[axis];
-    return ids[Math.floor(random() * ids.length)]!;
+  const pick = () => CAR_COLOURS[Math.floor(random() * CAR_COLOURS.length)]!;
+  /**
+   * `lap` spaces the cars of one lane evenly along it. A random phase let two
+   * of them start on the same tile, which read as one car drawn twice.
+   */
+  const drive = (id: string, from: GridPosition, to: GridPosition, lap: number) => {
+    const periodMs = 14_000 + Math.floor(random() * 8000);
+    vehicles.push({
+      id,
+      spriteId: carSpriteId(pick(), headingBetween(from, to)),
+      from,
+      to,
+      periodMs,
+      phaseMs: Math.round(periodMs * lap),
+    });
   };
 
-  // Driving: the inner lane of each road, from one edge of the map to the other.
-  for (let i = 0; i < 2; i += 1) {
-    vehicles.push({
-      id: `car_x_${i}`,
-      spriteId: pick("x"),
-      from: { x: 0, y: road },
-      to: { x: mapSize - 1, y: road },
-      periodMs: 14_000 + Math.floor(random() * 8000),
-      phaseMs: Math.floor(random() * 14_000),
-    });
-    vehicles.push({
-      id: `car_y_${i}`,
-      spriteId: pick("y"),
-      from: { x: road, y: 0 },
-      to: { x: road, y: mapSize - 1 },
-      periodMs: 14_000 + Math.floor(random() * 8000),
-      phaseMs: Math.floor(random() * 14_000),
-    });
+  const last = mapSize - 1;
+  for (let i = 0; i < CARS_PER_LANE; i += 1) {
+    const lap = i / CARS_PER_LANE;
+    // Driving on the right: eastbound keeps the southern lane, westbound the
+    // northern one, and the same rule turned a quarter turn for the other road.
+    drive(`car_east_${i}`, { x: 0, y: road + 1 }, { x: last, y: road + 1 }, lap);
+    drive(`car_west_${i}`, { x: last, y: road }, { x: 0, y: road }, lap);
+    drive(`car_south_${i}`, { x: road, y: 0 }, { x: road, y: last }, lap);
+    drive(`car_north_${i}`, { x: road + 1, y: last }, { x: road + 1, y: 0 }, lap);
   }
 
-  // Parked: the outer lane, spread either side of the crossroads.
-  const offsets = [-6, -2, 3, 7];
-  offsets.forEach((offset, index) => {
-    const along = road + offset;
+  // Parked: half a tile onto the verge either side of each road, so a moving
+  // car never drives through one.
+  const VERGE = 0.55;
+  const spots: Array<{ position: GridPosition; heading: CarHeading }> = [
+    { position: { x: road - 6, y: road - VERGE }, heading: "west" },
+    { position: { x: road + 4, y: road + 1 + VERGE }, heading: "east" },
+    { position: { x: road - VERGE, y: road - 5 }, heading: "north" },
+    { position: { x: road + 1 + VERGE, y: road + 6 }, heading: "south" },
+  ];
+  spots.forEach(({ position, heading }, index) => {
+    const along = heading === "east" || heading === "west" ? position.x : position.y;
     if (along < 1 || along >= mapSize - 1) return;
-    const onX = index % 2 === 0;
-    const spot = onX ? { x: along, y: road + 1 } : { x: road + 1, y: along };
     vehicles.push({
       id: `car_parked_${index}`,
-      spriteId: pick(onX ? "x" : "y"),
-      from: spot,
-      to: spot,
+      spriteId: carSpriteId(pick(), heading),
+      from: position,
+      to: position,
       periodMs: 0,
       phaseMs: 0,
     });

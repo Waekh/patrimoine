@@ -43,13 +43,47 @@ export const SPRITE_IDS = {
   park: "park_lv1",
   pond: "pond_lv1",
   fish: "fish_basic",
-  cars: {
-    x: ["car_red_x", "car_blue_x", "car_sand_x"],
-    y: ["car_red_y", "car_blue_y", "car_sand_y"],
-  },
   characterBasic: "character_basic",
   selection: "selection_ring",
   signBoard: "sign_board",
   signBoardHigh: "sign_board_high",
   font: "font_5x7",
 } as const;
+
+/**
+ * Sens de circulation, nommés depuis l'écran : "north" remonte vers le haut à
+ * droite, "south" descend vers le bas à gauche, "east" descend vers le bas à
+ * droite, "west" remonte vers le haut à gauche.
+ *
+ * Chaque sens a son propre sprite. Une voiture n'est jamais retournée par
+ * miroir : la lumière du monde vient du haut à gauche, un miroir la ferait
+ * venir du mauvais côté.
+ */
+export const CAR_HEADINGS = ["north", "east", "south", "west"] as const;
+export type CarHeading = (typeof CAR_HEADINGS)[number];
+
+/** Pas d'une case dans chaque sens, en coordonnées de grille. */
+export const CAR_HEADING_STEP: Record<CarHeading, Readonly<{ x: number; y: number }>> = {
+  north: { x: 0, y: -1 },
+  east: { x: 1, y: 0 },
+  south: { x: 0, y: 1 },
+  west: { x: -1, y: 0 },
+};
+
+/** Sens dans lequel roule une voiture qui va de `from` à `to`. */
+export function headingBetween(
+  from: Readonly<{ x: number; y: number }>,
+  to: Readonly<{ x: number; y: number }>,
+): CarHeading {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? "east" : "west";
+  return dy >= 0 ? "south" : "north";
+}
+
+export const CAR_COLOURS = ["blue", "red", "sand"] as const;
+export type CarColour = (typeof CAR_COLOURS)[number];
+
+export function carSpriteId(colour: CarColour, heading: CarHeading): string {
+  return `car_${colour}_${heading}`;
+}
